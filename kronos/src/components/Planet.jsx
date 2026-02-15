@@ -8,9 +8,9 @@
 // >> useRef for meshRef
 
 
-import {useFrame, useLoader} from '@react-three/fiber'
-import { useRef } from 'react'
-import { MeshBasicMaterial, Plane, TextureLoader, TextureUtils } from 'three'
+import { useFrame, useLoader } from "@react-three/fiber";
+import React, { useRef } from "react";
+import { TextureLoader } from "three";
 
 
 const Planet = ({
