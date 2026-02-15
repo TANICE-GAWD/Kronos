@@ -1,0 +1,11 @@
+html,
+body,
+#root {
+  margin: 0; /* removes default margin */
+  padding: 0; /* removes default padding */
+  width: 100%; /* full width */
+  height: 100%; /* full height */
+  overflow: hidden; /* prevents scrolling completely */
+  background: #000; /* black background */
+  font-family: system-ui, sans-serif; /* sets a clean default font */
+}
