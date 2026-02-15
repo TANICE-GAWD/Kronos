@@ -1,6 +1,16 @@
+// for me to make a planet controller 
+// steps to follow
+
+// >> make texture using useLoader 
+// >> make planet object with fields like radius,speed etc 
+// >> put texture in MeshBasicMaterial 
+// >> put geometry find sphereGeometry...put args
+// >> useRef for meshRef
+
+
 import {useFrame, useLoader} from '@react-three/fiber'
 import { useRef } from 'react'
-import { Plane, TextureLoader } from 'three'
+import { MeshBasicMaterial, Plane, TextureLoader, TextureUtils } from 'three'
 
 
 const Planet = ({
@@ -13,7 +23,7 @@ const Planet = ({
     const texture = useLoader(
         TextureLoader, `/texture/${name.toLowerCase()}.jpg`
     )
-    const meshRef = useRef;
+    const meshRef = useRef();
     useFrame((state,delta) => {
         meshRef.current.rotation.y += delta * 0.8
         const angle = elasped * speed
@@ -23,7 +33,6 @@ const Planet = ({
     });  
 
     return(
-        <>
         <mesh onClick={() => onSelect(name)}
         
         ref = {meshRef}
@@ -32,7 +41,7 @@ const Planet = ({
             <sphereGeometry args = {[radius,32,32]}/>
             <meshStandardMaterial map = {texture}/>
         </mesh>
-        </>
+        
     )
 }
 
