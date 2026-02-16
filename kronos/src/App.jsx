@@ -2,7 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import Sun from "./components/Sun";
 import { useState } from "react";
 import Planet from "./components/Planet";
-// import { Stars, OrbitControls } from "@react-three/drei";
+import { Stars, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 // import AnimationController from "./components/AnimationController";
 // import SaturnGroup from "./components/SaturnGroup";
@@ -10,6 +10,8 @@ import * as THREE from "three";
 
 function App() {
   const [elapsed, setElapsed] = useState(0);
+  // const [isPaused, setIsPaused] = useState(false);
+  // const [selected, setSelected] = useState(null);
 
   const planets = [
     { name: "Mercury", radius: 0.25, distance: 3, speed: 2.0 },
@@ -23,7 +25,27 @@ function App() {
 
   return (
     <>
+      {/* <button
+        style={{
+          position: "absolute",
+          top: 20,
+          right: 20,
+          zIndex: 100,
+          padding: "12px 20px",
+          fontSize: "20px",
+          background: isPaused ? "#e74c3c" : "#27ae60",
+          color: "white",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          fontWeight: "bold",
+        }}
+        onClick={() => setIsPaused((p) => !p)}
+      >
+        {isPaused ? "Resume" : "Pause"}
+      </button> */}
       <Canvas camera={{ position: [0, 10, 20], fov: 45 }}>
+        {/* <AnimationController isPaused={isPaused} setElapsed={setElapsed} /> */}
         <ambientLight intensity={0.3} />
         <directionalLight position={[5, 5, 5]} intensity={1.5} />
 
@@ -36,13 +58,15 @@ function App() {
             distance={planet.distance}
             speed={planet.speed}
             elapsed={elapsed}
+            // isPaused={isPaused}
+            // onSelect={setSelected}
           />
         ))}
-        <SaturnGroup
+        {/* <SaturnGroup
           onSelect={setSelected}
           elapsed={elapsed}
           isPaused={isPaused}
-        />
+        /> */}
         <Stars
           radius={100}
           depth={50}
@@ -60,7 +84,7 @@ function App() {
           zoomSpeed={1.0}
           minDistance={2}
           maxDistance={1000}
-          autoRotate={!isPaused}
+          // autoRotate={!isPaused}
           autoRotateSpeed={0.4}
           mouseButtons={{
             LEFT: THREE.MOUSE.ROTATE,
@@ -69,9 +93,9 @@ function App() {
           }}
         />
       </Canvas>
-      {selected && (
+      {/* {selected && (
         <InfoPanel planet={selected} onClose={() => setSelected(null)} />
-      )}
+      )} */}
     </>
   );
 }

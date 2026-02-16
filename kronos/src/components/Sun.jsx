@@ -19,7 +19,7 @@ const Sun = ({
 
 }) => {
     const SunTexture = useLoader(
-        TextureLoader(
+        new TextureLoader(
             `/textures/sun.jpg`
         )
     )
