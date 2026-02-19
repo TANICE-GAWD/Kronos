@@ -22,9 +22,9 @@ function App(){
 
   return(
     <Canvas camera={{ position: [0, 10, 20], fov: 45 }}>
+      <pls_jst_spin_twn_T_T setElapsed={setElapsed} />
       <ambientLight intensity={3}/>
       <directionalLight position={[5, 5, 5]} intensity={1.5} />
-      <pls_jst_spin_twn_T_T setElapsed={setElapsed} />
       <Sun/>
       {planets.map((planet) => (
           <Planet

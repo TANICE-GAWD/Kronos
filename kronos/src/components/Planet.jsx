@@ -30,9 +30,9 @@ const Planet = ({
         meshRef.current.rotation.y += delta * 0.8
         const angle = elapsed * speed
         meshRef.current.position.x = distance * Math.cos(angle)
-        meshRef.current.position.y = distance * Math.sin(angle)
+        meshRef.current.position.z = distance * Math.sin(angle)
 
-    });  
+    });
 
     return(
         <mesh
