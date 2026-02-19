@@ -11,15 +11,9 @@ import {useLoader, useFrame} from '@react-three/fiber'
 import { TextureLoader } from 'three'
 
 
-const Sun = ({
-    radius,
-    elapsed,
-    distance,
-    speed
-
-}) => {
+const Sun = () => {
     const SunTexture = useLoader(
-        new TextureLoader(
+        TextureLoader(
             `/textures/sun.jpg`
         )
     )
@@ -34,3 +28,5 @@ const Sun = ({
 };
 
 export default Sun;
+
+

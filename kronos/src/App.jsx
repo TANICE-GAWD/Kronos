@@ -46,11 +46,11 @@ function App() {
       </button> */}
       <Canvas camera={{ position: [0, 10, 20], fov: 45 }}>
         {/* <AnimationController isPaused={isPaused} setElapsed={setElapsed} /> */}
-        <ambientLight intensity={0.3} />
-        <directionalLight position={[5, 5, 5]} intensity={1.5} />
+        {/* <ambientLight intensity={0.3} />
+        <directionalLight position={[5, 5, 5]} intensity={1.5} /> */}
 
         <Sun />
-        {planets.map((planet) => (
+        {/* {planets.map((planet) => (
           <Planet
             key={planet.name}
             name={planet.name}
@@ -61,13 +61,13 @@ function App() {
             // isPaused={isPaused}
             // onSelect={setSelected}
           />
-        ))}
+        ))} */}
         {/* <SaturnGroup
           onSelect={setSelected}
           elapsed={elapsed}
           isPaused={isPaused}
         /> */}
-        <Stars
+        {/* <Stars
           radius={100}
           depth={50}
           count={5000}
@@ -91,7 +91,7 @@ function App() {
             MIDDLE: THREE.MOUSE.DOLLY,
             RIGHT: THREE.MOUSE.PAN,
           }}
-        />
+        /> */}
       </Canvas>
       {/* {selected && (
         <InfoPanel planet={selected} onClose={() => setSelected(null)} />
