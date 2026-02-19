@@ -18,22 +18,24 @@ const Planet = ({
     radius,
     distance,
     speed,
-    elasped
+    elapsed
 }) => {
+
+    
     const texture = useLoader(
-        TextureLoader, `/texture/${name.toLowerCase()}.jpg`
+        TextureLoader, `/textures/${name.toLowerCase()}.jpg`
     )
     const meshRef = useRef();
     useFrame((state,delta) => {
         meshRef.current.rotation.y += delta * 0.8
-        const angle = elasped * speed
+        const angle = elapsed * speed
         meshRef.current.position.x = distance * Math.cos(angle)
         meshRef.current.position.y = distance * Math.sin(angle)
 
     });  
 
     return(
-        <mesh onClick={() => onSelect(name)}
+        <mesh
         
         ref = {meshRef}
         position={[distance,0,0]}
