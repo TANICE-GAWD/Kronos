@@ -30,10 +30,10 @@ const Planet = ({
 
         const elapsed = state.clock.getElapsedTime();
 
-        // self rotation
+        
         meshRef.current.rotation.y += delta * 0.8;
 
-        // orbit
+        
         const angle = elapsed * speed;
 
         meshRef.current.position.x =

@@ -9,7 +9,7 @@ function App(){
   const planets = [
     { name: "Mercury", radius: 0.25, distance: 3, speed: 2.0 },
     { name: "Venus", radius: 0.45, distance: 4.5, speed: 1.6 },
-    { name: "earth", radius: 0.5, distance: 6, speed: 1.0 },
+    { name: "Earth", radius: 0.5, distance: 6, speed: 1.0 },
     { name: "Mars", radius: 0.35, distance: 8, speed: 0.8 },
     { name: "Jupiter", radius: 1.2, distance: 12, speed: 0.4 },
     { name: "Uranus", radius: 0.7, distance: 20, speed: 0.2 },

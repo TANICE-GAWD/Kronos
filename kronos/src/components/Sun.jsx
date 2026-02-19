@@ -22,7 +22,7 @@ const Sun = () => {
     )
 
     useFrame(() => {
-        meshRef.current.rotation.y +=0.005
+        meshRef.current.rotation.y +=0.04
     })
 
 
