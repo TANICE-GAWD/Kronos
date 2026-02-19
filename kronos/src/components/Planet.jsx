@@ -12,39 +12,44 @@ import { useFrame, useLoader } from "@react-three/fiber";
 import React, { useRef } from "react";
 import { TextureLoader } from "three";
 
-
 const Planet = ({
     name,
     radius,
     distance,
-    speed,
-    elapsed
+    speed
 }) => {
 
-    
     const texture = useLoader(
-        TextureLoader, `/textures/${name.toLowerCase()}.jpg`
-    )
+        TextureLoader,
+        `/textures/${name.toLowerCase()}.jpg`
+    );
+
     const meshRef = useRef();
-    useFrame((state,delta) => {
-        meshRef.current.rotation.y += delta * 0.8
-        const angle = elapsed * speed
-        meshRef.current.position.x = distance * Math.cos(angle)
-        meshRef.current.position.z = distance * Math.sin(angle)
+
+    useFrame((state, delta) => {
+
+        const elapsed = state.clock.getElapsedTime();
+
+        // self rotation
+        meshRef.current.rotation.y += delta * 0.8;
+
+        // orbit
+        const angle = elapsed * speed;
+
+        meshRef.current.position.x =
+            distance * Math.cos(angle);
+
+        meshRef.current.position.z =
+            distance * Math.sin(angle);
 
     });
 
     return(
-        <mesh
-        
-        ref = {meshRef}
-        position={[distance,0,0]}
-        >
-            <sphereGeometry args = {[radius,32,32]}/>
-            <meshStandardMaterial map = {texture}/>
+        <mesh ref={meshRef}>
+            <sphereGeometry args={[radius, 32, 32]}/>
+            <meshStandardMaterial map={texture}/>
         </mesh>
-        
-    )
+    );
 }
 
 export default Planet;
