@@ -208,42 +208,6 @@ const themes = {
     secondaryWave: new THREE.Color(0xff5500),
     tertiaryWave: new THREE.Color(0xffdd22)
   },
-  ruby: {
-    diskHot: new THREE.Color(0xFFE4E1),
-    diskMid: new THREE.Color(0xE0115F),
-    diskEdge: new THREE.Color(0x8B0000),
-    diskDeep: new THREE.Color(0x550000),
-    lensing: new THREE.Color(0xFF6347),
-    glow: new THREE.Color(0xFF4500),
-    photonSphere: new THREE.Color(0xFF7F50),
-    primaryWave: new THREE.Color(0xFF4500),
-    secondaryWave: new THREE.Color(0xE0115F),
-    tertiaryWave: new THREE.Color(0xFF6347)
-  },
-  plasma: {
-    diskHot: new THREE.Color(0xffffff),
-    diskMid: new THREE.Color(0x66ff66),
-    diskEdge: new THREE.Color(0x00cc4d),
-    diskDeep: new THREE.Color(0x006626),
-    lensing: new THREE.Color(0x99ff99),
-    glow: new THREE.Color(0x66ff99),
-    photonSphere: new THREE.Color(0x88ffaa),
-    primaryWave: new THREE.Color(0x66ff99),
-    secondaryWave: new THREE.Color(0x22ffaa),
-    tertiaryWave: new THREE.Color(0xaaffcc)
-  },
-  void: {
-    diskHot: new THREE.Color(0xffffff),
-    diskMid: new THREE.Color(0x87cefa),
-    diskEdge: new THREE.Color(0x1e90ff),
-    diskDeep: new THREE.Color(0x00008b),
-    lensing: new THREE.Color(0xb0e0e6),
-    glow: new THREE.Color(0xadd8e6),
-    photonSphere: new THREE.Color(0x99ccff),
-    primaryWave: new THREE.Color(0xadd8e6),
-    secondaryWave: new THREE.Color(0x1e90ff),
-    tertiaryWave: new THREE.Color(0xb0e0e6)
-  }
 };
 let currentThemeName = 'inferno';
 let currentTheme = themes[currentThemeName];
