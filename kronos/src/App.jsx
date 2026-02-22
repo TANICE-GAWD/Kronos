@@ -3,8 +3,8 @@ import Sun from "./components/Sun";
 import Planet from "./components/Planet";
 import { Stars, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
-import blackholeeee from "./blackhole";
-
+import BlackHole from "./blackhole/blackhole";
+import "./blackhole/style.css"
 function App(){
 
   const planets = [
@@ -22,7 +22,7 @@ function App(){
 
       <ambientLight intensity={3}/>
       <directionalLight position={[5, 5, 5]} intensity={1.5} />
-      <blackholeeee />
+      <BlackHole />
       <Sun/>
 
       {planets.map((planet) => (
