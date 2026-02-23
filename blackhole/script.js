@@ -197,12 +197,12 @@ scene.add(blackHole);
 
 const themes = {
   inferno: {
-    diskHot: new THREE.Color(0xffffff),
+    diskHot: new THREE.Color(0x000000),
     diskMid: new THREE.Color(0xffaa33),
     diskEdge: new THREE.Color(0xcc331a),
     diskDeep: new THREE.Color(0x661a00),
     lensing: new THREE.Color(0xffcc66),
-    glow: new THREE.Color(0xff8833),
+    glow: new THREE.Color(0x4a5d73),
     photonSphere: new THREE.Color(0xffbb44),
     primaryWave: new THREE.Color(0xffaa33),
     secondaryWave: new THREE.Color(0xff5500),
@@ -812,6 +812,48 @@ window.addEventListener('resize', () => {
 });
 
 const clock = new THREE.Clock();
+///////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////
+////////////////////////////
+//////////////////////
+const jetGeometry = new THREE.CylinderGeometry(0.1, 0.8, 20, 32, 1, true);
+const jetMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    uTime: { value: 0 },
+    uIntensity: { value: 0 }, 
+    uColor: { value: new THREE.Color(0x66ccff) } 
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    uniform float uIntensity;
+    void main() {
+      vUv = uv;
+      // Scale the jet's thickness and length based on intensity
+      vec3 pos = position;
+      pos.xz *= (1.0 + uIntensity); 
+      vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+      gl_Position = projectionMatrix * mvPosition;
+    }`,
+  fragmentShader: `
+    varying vec2 vUv;
+    uniform float uTime;
+    uniform float uIntensity;
+    uniform vec3 uColor;
+    void main() {
+      // Create a moving plasma effect along the jet
+      float movingNoise = sin(vUv.y * 20.0 - uTime * 25.0);
+      float alpha = smoothstep(0.0, 0.1, vUv.y) * smoothstep(1.0, 0.9, vUv.y);
+      alpha *= (movingNoise * 0.5 + 0.5) * uIntensity;
+      gl_FragColor = vec4(uColor * 2.0, alpha);
+    }`,
+  transparent: true,
+  blending: THREE.AdditiveBlending,
+  side: THREE.DoubleSide,
+  depthWrite: false
+});
+
+const jet = new THREE.Mesh(jetGeometry, jetMaterial);
+scene.add(jet);
 
 function animate() {
   requestAnimationFrame(animate);
