@@ -812,26 +812,38 @@ window.addEventListener('resize', () => {
 });
 
 const clock = new THREE.Clock();
-///////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////
-////////////////////////////
-//////////////////////
-const jetGeometry = new THREE.CylinderGeometry(0.1, 0.8, 20, 32, 1, true);
+
+///////////////////////////
+////////////////////////
+
+////////////////////////////////////
+
+
+const jetGroup = new THREE.Group(); 
+const jetGeom = new THREE.CylinderGeometry(0.02, 0.4, 40, 32, 1, true); 
+
+
 const jetMaterial = new THREE.ShaderMaterial({
   uniforms: {
     uTime: { value: 0 },
-    uIntensity: { value: 0 }, 
-    uColor: { value: new THREE.Color(0x66ccff) } 
+    uIntensity: { value: 0.0 },
+    uColor: { value: new THREE.Color(0xaaddff) } // Electric blue/white
   },
   vertexShader: `
     varying vec2 vUv;
+    varying float vViewZ;
     uniform float uIntensity;
+    
     void main() {
       vUv = uv;
-      // Scale the jet's thickness and length based on intensity
       vec3 pos = position;
-      pos.xz *= (1.0 + uIntensity); 
+      
+      // Taper the jet: thinner near the black hole, wider further away
+      float taper = smoothstep(0.0, 1.0, abs(pos.y) / 20.0);
+      pos.xz *= (0.2 + taper * 1.5) * uIntensity;
+      
       vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+      vViewZ = -mvPosition.z;
       gl_Position = projectionMatrix * mvPosition;
     }`,
   fragmentShader: `
@@ -839,12 +851,24 @@ const jetMaterial = new THREE.ShaderMaterial({
     uniform float uTime;
     uniform float uIntensity;
     uniform vec3 uColor;
+
     void main() {
-      // Create a moving plasma effect along the jet
-      float movingNoise = sin(vUv.y * 20.0 - uTime * 25.0);
-      float alpha = smoothstep(0.0, 0.1, vUv.y) * smoothstep(1.0, 0.9, vUv.y);
-      alpha *= (movingNoise * 0.5 + 0.5) * uIntensity;
-      gl_FragColor = vec4(uColor * 2.0, alpha);
+      if (uIntensity < 0.01) discard;
+
+      // Vertical flow speed (simulating half the speed of light)
+      float flow = fract(vUv.y * 2.0 - uTime * 4.0);
+      float noise = sin(vUv.y * 40.0 - uTime * 15.0) * 0.5 + 0.5;
+      
+      // Core beam vs outer glow
+      float rim = 1.0 - abs(vUv.x - 0.5) * 2.0;
+      float core = pow(rim, 4.0) * 2.0;
+      
+      // Combine for the "vomit" texture
+      float alpha = smoothstep(0.0, 0.1, uIntensity) * rim * uIntensity;
+      alpha *= (noise * 0.4 + 0.6); // Add flickering
+      
+      vec3 finalColor = mix(uColor, vec3(1.0), core * 0.5);
+      gl_FragColor = vec4(finalColor * (1.0 + core), alpha * 0.8);
     }`,
   transparent: true,
   blending: THREE.AdditiveBlending,
@@ -852,8 +876,18 @@ const jetMaterial = new THREE.ShaderMaterial({
   depthWrite: false
 });
 
-const jet = new THREE.Mesh(jetGeometry, jetMaterial);
-scene.add(jet);
+const jetMesh = new THREE.Mesh(jetGeom, jetMaterial);
+jetGroup.add(jetMesh);
+scene.add(jetGroup);
+
+
+jetGroup.rotation.x = (Math.PI / 2.6) - (Math.PI / 2);
+
+jetGroup.rotation.z = 0.1;
+
+let jetActive = false;
+let jetStartTime = 0;
+const JET_DURATION = 7.0; 
 
 function animate() {
   requestAnimationFrame(animate);
@@ -866,6 +900,45 @@ function animate() {
   starMaterial.uniforms.uTime.value = elapsedTime;
   photonSphereMaterial.uniforms.uTime.value = elapsedTime;
   diskMaterial.uniforms.uCameraPosition.value.copy(camera.position);
+
+
+
+  const spinSpeed = 10; // Adjust this for faster/slower sweeping
+  jetGroup.rotation.y = elapsedTime * spinSpeed;
+
+  // --- JET "VOMITING" TRIGGER ---
+  if (Math.floor(elapsedTime) % 1 === 0 && !jetActive && elapsedTime > 5) {
+    jetActive = true;
+    jetStartTime = elapsedTime;
+    triggerDiskEcho(); 
+    renderer.toneMappingExposure = 1.4; 
+  }
+
+  // --- JET ANIMATION ---
+  if (jetActive) {
+    const progress = (elapsedTime - jetStartTime) / JET_DURATION;
+    
+    if (progress < 1.0) {
+      let intensity;
+      if (progress < 0.1) {
+        intensity = progress / 0.1; 
+      } else {
+        intensity = Math.pow(1.0 - progress, 2.0); 
+      }
+      
+      jetMaterial.uniforms.uIntensity.value = intensity;
+      jetMaterial.uniforms.uTime.value = elapsedTime;
+      
+      bloomPass.strength = 0.7 + (intensity * 2.5);
+      bloomPass.threshold = 0.75 - (intensity * 0.4);
+      renderer.toneMappingExposure = 0.95 + (intensity * 0.45);
+    } else {
+      jetActive = false;
+      jetMaterial.uniforms.uIntensity.value = 0;
+      bloomPass.strength = 0.7;
+      renderer.toneMappingExposure = 0.95;
+    }
+  }
 
   if (diskEchoActive) {
     const timeSinceEchoStart = elapsedTime - diskEchoStartTime;
