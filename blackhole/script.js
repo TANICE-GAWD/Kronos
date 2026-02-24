@@ -827,7 +827,7 @@ const jetMaterial = new THREE.ShaderMaterial({
   uniforms: {
     uTime: { value: 0 },
     uIntensity: { value: 0.0 },
-    uColor: { value: new THREE.Color(0xaaddff) } // Electric blue/white
+    uColor: { value: new THREE.Color(0xaaddff) }
   },
   vertexShader: `
     varying vec2 vUv;
@@ -903,10 +903,10 @@ function animate() {
 
 
 
-  const spinSpeed = 10; // Adjust this for faster/slower sweeping
+  const spinSpeed = 10;
   jetGroup.rotation.y = elapsedTime * spinSpeed;
 
-  // --- JET "VOMITING" TRIGGER ---
+  
   if (Math.floor(elapsedTime) % 1 === 0 && !jetActive && elapsedTime > 5) {
     jetActive = true;
     jetStartTime = elapsedTime;
@@ -914,7 +914,7 @@ function animate() {
     renderer.toneMappingExposure = 1.4; 
   }
 
-  // --- JET ANIMATION ---
+  
   if (jetActive) {
     const progress = (elapsedTime - jetStartTime) / JET_DURATION;
     
