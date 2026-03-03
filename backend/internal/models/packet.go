@@ -8,6 +8,8 @@ import (
 	 "time"
 	 "github.com/google/uuid"
 
+	 
+
 )
 
 type Point struct {
@@ -38,4 +40,13 @@ type Packet struct {
 	LaunchTime time.Time `json:"launch_time"`
 	ETA        time.Time `json:"eta"`
 	Status     Status    `json:"status"`
+}
+
+
+func (p Packet) distance() float64 {
+	d := ((p.End.X - p.Start.X)^2 + 
+		(p.End.Y - p.Start.Y)^2 +
+		(p.End.Z - p.Start.Z)^2)^(1/2)
+	
+
 }
