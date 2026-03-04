@@ -7,7 +7,8 @@ package packet
 import (
 	 "time"
 	 "github.com/google/uuid"
-
+	 "math"
+	 "github.com/deeean/go-vector/vector3"
 	 
 
 )
@@ -21,10 +22,10 @@ type Point struct {
 type EnumStatus string
 
 const (
-	InFlight EnumStatus = "in-flight"
-	GravityCaught EnumStatus = "caught-in-gravity"
-	Blocked EnumStatus = "blocked"
-	Arrived EnumStatus = "arrived"
+	Active EnumStatus = "active"
+	Stalled EnumStatus = "stalled"  // near a blackhole i.e the gravity is like slowing time down...so it is taking longer
+	Destroyed EnumStatus = "destroyed" // crossed event horizon
+	Settled EnumStatus = "Settled"
 )
 
 type Payload struct {
@@ -39,14 +40,16 @@ type Packet struct {
 	Payload    Payload   `json:"payload"`
 	LaunchTime time.Time `json:"launch_time"`
 	ETA        time.Time `json:"eta"`
-	Status     Status    `json:"status"`
+	Status     EnumStatus`json:"status"`
 }
 
 
-func (p Packet) distance() float64 {
-	d := ((p.End.X - p.Start.X)^2 + 
-		(p.End.Y - p.Start.Y)^2 +
-		(p.End.Z - p.Start.Z)^2)^(1/2)
-	
+func Distance(a Point, b Point) float64 {
 
+
+	return math.Sqrt(
+			math.Pow(b.X-a.X, 2) +
+			math.Pow(b.Y-a.Y, 2) +
+			math.Pow(b.Z-a.Z, 2),
+	)
 }
