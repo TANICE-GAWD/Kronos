@@ -8,10 +8,10 @@ import(
 	"time"
 )
 
-const c float64 = 50.0 // speed of light....but made unitary..299,792,458 m/s
+const SpeedOfLight float64 = 50.0 // speed of light....but made unitary..299,792,458 m/s
 
-const pull_r float64 = 40.0 // define pull rad for Blackhoel
-const time_dil = 0.3 
+const Pull_r float64 = 40.0 // define pull rad for Blackhoel
+const Time_dil = 0.3 
 
 
 
@@ -22,16 +22,20 @@ const time_dil = 0.3
 // 	return Time
 // }
 
-unit vector =  vector/vector_magnitude
+
 
 func Direction(p packet.Packet) packet.Point {
 	// Direction =  (end - start)/distance
-	dist := p.Distance
-	
+	dist := p.Distance()
+
+	if dist == 0{
+		return packet.Point{}
+	}
+
 	return packet.Point{
 		X: (p.End.X - p.Start.X)/dist,
-		Y: (p.End.Y - p.Start.X)/dist,
-		Z: (p.End.Z - p.Start.X)/dist,
+		Y: (p.End.Y - p.Start.Y)/dist,
+		Z: (p.End.Z - p.Start.Z)/dist,
 	}
 
 }
@@ -39,16 +43,30 @@ func Direction(p packet.Packet) packet.Point {
 
 // New pos = cur pos + (Direction * Velocity * DeltaTime *  Dil factor) // Delta time = each tick /frame of server
 
-func UpdatePos(p packet.Packet, deltaTime float64) {
+func UpdatePos(p *packet.Packet, deltaTime float64) {
 	dir := Direction(*p)
-	ticker := time.Tick(1 * time.Second)
-	for i:=0 ; i< (what do i put here); i++{
-		<-ticker
-		DeltaTime := time.Now
-		New_pos := p.CurrentPos + (Direction * p.Velocity * DeltaTime * p.DilationFactor)
 
+
+	move := p.Velocity * p.DilationFactor * deltaTime
+	p.CurrentPos.X += dir.X * move
+	p.CurrentPos.Y += dir.Y * move
+	p.CurrentPos.Z += dir.Z * move
+	
+}
+
+
+
+func RunPhysics(p *packet.Packet){
+	ticker := time.NewTicker(time.Second/60)
+	last := time.Now()
+	defer ticker.Stop()
+	for range ticker.C {
+		now  := time.Now()
+		delta := now.Sub(last).Seconds()
+		last = now
+
+		UpdatePos(p , delta)
 	}
+	
 
-	
-	
 }
