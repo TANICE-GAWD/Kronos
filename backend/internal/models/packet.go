@@ -22,9 +22,9 @@ type Point struct {
 type EnumStatus string
 
 const (
-	Active EnumStatus = "active" // in transfer
-	Stalled EnumStatus = "stalled"  // near a blackhole i.e the gravity is like slowing time down...so it is taking longer
-	Destroyed EnumStatus = "destroyed" // crossed event horizon
+	Active EnumStatus = "active" 
+	Stalled EnumStatus = "stalled"
+	Destroyed EnumStatus = "destroyed"
 	Settled EnumStatus = "settled"
 )
 
@@ -56,3 +56,12 @@ func (p Packet) Distance(a Point, b Point) float64 {
 			math.Pow(b.Z-a.Z, 2),
 	)
 }
+
+// for me : When the packet is created: during gin handler creation
+
+// p.Velocity = SpeedOfLight
+// p.DilationFactor = 1
+
+// Then movement becomes:
+
+// move = p.Velocity * p.DilationFactor * deltaTime
