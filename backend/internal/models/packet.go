@@ -37,6 +37,7 @@ type Packet struct {
 	ID         uuid.UUID `json:"id"`
 	Start      Point     `json:"start"`
 	End        Point     `json:"end"`
+	DestinationPlanet string `json:"destination_planet"`
 	CurrentPos Point     `json:"current_pos"`
 	Payload    Payload   `json:"payload"`
 	LaunchTime time.Time `json:"launch_time"`
