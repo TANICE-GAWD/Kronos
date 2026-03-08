@@ -16,7 +16,7 @@ const Time_dil = 0.3
 const ArrivalThreshold = 3.0
 
  // below is temporary mock fix...late remember to put a struct of planet and then map it here
-func GetPlaentPosition(name string ) packet.Point{
+func GetPlanetPosition(name string ) packet.Point{
 	switch name{
 
 	case "earth":
