@@ -192,20 +192,6 @@ const starMaterial = new THREE.ShaderMaterial({
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const stars = new THREE.Points(starGeometry, starMaterial);
 scene.add(stars);
 
