@@ -13,9 +13,10 @@ const SpeedOfLight float64 = 50.0 // speed of light....but made unitary..299,792
 const Pull_r float64 = 40.0 // define pull rad for Blackhoel
 const Time_dil = 0.3 
 
-const ArrivalThreshold = 3.0
+const ArrivalThreshold = 1.0
 
- // below is temporary mock fix...late remember to put a struct of planet and then map it here
+
+ // below is temporary mock fix...later remember to put a struct of planet and then map it here
 func GetPlanetPosition(name string ) packet.Point{
 	switch name{
 
@@ -31,19 +32,19 @@ func GetPlanetPosition(name string ) packet.Point{
 }
 
 
-func Direction(p packet.Packet, target packet.Point) packet.Point {
+func Direction(p packet.Packet, target packet.Point) (packet.Point, float64) {
 
 	dist := packet.Distance(p.CurrentPos, target)
 
 	if dist == 0 {
-		return packet.Point{}
+		return packet.Point{}, 0
 	}
 
 	return packet.Point{
 		X: (target.X - p.CurrentPos.X) / dist,
 		Y: (target.Y - p.CurrentPos.Y) / dist,
 		Z: (target.Z - p.CurrentPos.Z) / dist,
-	}
+	}, dist
 }
 
 
@@ -51,9 +52,13 @@ func Direction(p packet.Packet, target packet.Point) packet.Point {
 
 func UpdatePos(p *packet.Packet, target packet.Point, deltaTime float64) {
 
-	dir := Direction(*p, target)
+	dir, dist := Direction(*p, target)
 
 	move := p.Velocity * p.DilationFactor * deltaTime
+	if move >= dist {
+		p.CurrentPos = target
+		return
+	}
 
 	p.CurrentPos.X += dir.X * move
 	p.CurrentPos.Y += dir.Y * move
@@ -62,32 +67,21 @@ func UpdatePos(p *packet.Packet, target packet.Point, deltaTime float64) {
 
 
 
-
-func RunPhysics(p *packet.Packet, blackHole packet.Point) {
-
-	ticker := time.NewTicker(time.Second / 60)
-	last := time.Now()
-	defer ticker.Stop()
-
-	for range ticker.C {
-
-		now := time.Now()
-		delta := now.Sub(last).Seconds()
-		last = now
-
-		
-		target := GetPlanetPosition(p.DestinationPlanet)
-
-		UpdatePos(p, target, delta)
-
-		ApplyGravity(p, blackHole)
-
-		CheckArrival(p, target)
-
-		if p.Status == packet.Destroyed || p.Status == packet.Settled {
-			return
-		}
+// use for global websocket loop in engine/scheduler.go
+func RunPhysics(p *packet.Packet, blackHole packet.Point, deltaTime float64) {
+	if p.Status == packet.StatusDestroyed || p.Status == packet.StatusSettled {
+		return
 	}
+
+	
+	target := GetPlanetPosition(p.Destination)
+
+	
+	UpdatePos(p, target, deltaTime)
+
+
+	ApplyGravity(p, blackHole)
+	CheckArrival(p, target)
 }
 
 
@@ -100,12 +94,12 @@ func ApplyGravity(p *packet.Packet, blackHolePos packet.Point) {
 		return
 	}
 
-	if dist < Pull_r+10 {
+	if dist < Pull_r+20 {
 
 		p.Status = packet.Stalled
 
-		if p.DilationFactor > 0.1 {
-			p.DilationFactor -= 0.01
+		if p.DilationFactor > Time_dil {
+			p.DilationFactor -= 0.05
 		}
 
 	} else {
