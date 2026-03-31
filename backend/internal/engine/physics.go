@@ -1,7 +1,7 @@
 // defining Laws of the Universe
 
 // providing scale factor
-package physics
+package engine
 
 import(
 	"models/packet"
@@ -69,7 +69,7 @@ func UpdatePos(p *packet.Packet, target packet.Point, deltaTime float64) {
 
 // use for global websocket loop in engine/scheduler.go
 func RunPhysics(p *packet.Packet, blackHole packet.Point, deltaTime float64) {
-	if p.Status == packet.StatusDestroyed || p.Status == packet.StatusSettled {
+	if p.Status == packet.Destroyed || p.Status == packet.Settled {
 		return
 	}
 
