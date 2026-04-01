@@ -1,9 +1,7 @@
 package transport
 
 import(
-	"time"
-	"net/http"
-	"math/rand"
+	"github.com/google/uuid"
 	"backend/internal/models/packet"
 
 )
@@ -34,7 +32,6 @@ func (h *Hub) Run(){
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
-				close(client.send)
 			}
 		case stateSnapshot := <-h.broadcast:
 			for client := range h.clients {
