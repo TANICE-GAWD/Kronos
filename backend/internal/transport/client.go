@@ -3,7 +3,6 @@ package transport
 import (
 	"time"
 	"net/http"
-	"github.com/google/uuid"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/google/uuid"
@@ -17,6 +16,14 @@ var upgrader = websocket.Upgrader{
 	
 }
 
+const (
+	writeWait = 10 * time.Second
+	pongWait  = 60 * time.Second
+	pingPeriod = (pongWait * 9) / 10
+)
+
+
+
 type Client struct{
 	ID string
 	Conn *websocket.Conn
@@ -26,7 +33,7 @@ type Client struct{
 
 
 func NewClient(id string, conn *websocket.Conn, hub *Hub) *Client {
-	return &Client{ID: id, Conn: conn, send: make(chan map[uuid.UUID]packet.Packet), hub: hub}
+	return &Client{ID: id, Conn: conn, send: make(chan map[uuid.UUID]packet.Packet, 1), hub: hub}
 }
 
 
@@ -34,5 +41,43 @@ func NewClient(id string, conn *websocket.Conn, hub *Hub) *Client {
 func (c *Client) Close(){
 	close(c.send)
 }
+
+
+func (c *Client) Write(){
+	ticker := time.NewTicker(pingPeriod)
+	defer func() {
+		ticker.Stop()
+		c.Conn.Close()
+	}()
+
+	for{
+		select{
+		case stateSnapshot, ok := <- c.send:
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if !ok{
+				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			else{
+				err:= c.Conn.WriteJSON(stateSnapshot)
+				if err != nil{
+					return
+				}
+			}
+		case <-ticker.C:
+			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		
+		}
+	}
+
+
+
+}
+
+
+
 
 
