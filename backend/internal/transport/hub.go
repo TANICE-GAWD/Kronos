@@ -24,42 +24,31 @@ func NewHub () *Hub{
 	}
 }
 
-func (h *Hub) RegisterClient(c *Client){
-	h.clients[c] = true;
-}
 
-func (h *Hub) UnRegisterClient (c *Client){
-	_,ok := h.clients[c]
-	if ok{
-		delete(h.clients,c)
-		close(c.send)
-	}
-
-}
 
 func (h *Hub) Run(){
 	for{
 		select{
 		case client := <- h.register:
-			h.RegisterClient(client)
+			h.clients[client] = true;
 		case client := <-h.unregister:
-			h.UnRegisterClient(client)
+			if _, ok := h.clients[client]; ok {
+				delete(h.clients, client)
+				close(client.send)
+			}
 		case stateSnapshot := <-h.broadcast:
-			h.BroadCast(stateSnapshot)
+			for client := range h.clients {
+				select {
+				case client.send <- stateSnapshot:
+				default:
+					close(client.send)
+					delete(h.clients, client)
+				}
+			}
 		}
 	}
 
 }
 
 
-func (h *Hub) BroadCast(ss map[uuid.UUID]packet.Packet){
-	for client := range h.clients{
-		select{
-		case client.send <- ss:
-		default:
-			close(client.send)
-			delete(h.clients,client)
-		}
-	}
 
-}
