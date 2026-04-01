@@ -5,33 +5,58 @@ import(
 	"time",
 	"models/packet"
 	"sync"
-	"uuid"
+	"github.com/google/uuid"
+	"physics"
 )
+
 type Scheduler struct{
 	ActivePackets map[uuid.UUID]*packet.Packet
 	mu sync.RWMutex
 	BlackHole packet.Point
 	UpdateChan chan map[uuid.UUID]*packet.Packet
+}
 
-func Start(s *Scheduler){
+
+func NewScheduler(blackHole packet.Point) *Scheduler {
+	return &Scheduler{
+		ActivePackets: make(map[uuid.UUID]*packet.Packet), 
+		BlackHole:     blackHole,
+		UpdateChan:    make(chan map[uuid.UUID]*packet.Packet), 
+	}
+}
+
+func (s *Scheduler) Start(){
 	tick := time.NewTicker(time.Second/60)
 	last := time.Now()
-	s.mu.Lock()
-	defer s.mu.Unlock()
+
+	defer tick.Stop()
 	
 	for range tick.C{
-
-		for key,p range s.ActivePackets{
-			now:= time.Now()
-			deltaTime := now.Sub(last)
-			last = now
-			physics.RunPhysics(p, BlackHole, deltaTime)
-			if(p.Status == p.Settled || p.Status == p.Destroyed){
-				p.CleanUp()
+		keysToDelete := []uuid.UUID{}
+		
+		now:= time.Now()
+		deltaTime := now.Sub(last).Seconds()
+		last = now
+		s.mu.Lock()
+		for key, p := range s.ActivePackets{
+			physics.RunPhysics(p, s.BlackHole, deltaTime)
+			if(p.Status == packet.Settled || p.Status == packet.Destroyed){
+				keys = append(keysToDelete,key)
 			}
 		}
 		
+		for _, key := range keys{
+			delete(s.ActivePackets,key)
+		}
+
+		
+
+
+		keysToDelete = nil
+		s.mu.Unlock()
 	}
+	
+	
 }
 
 func (s *Scheduler) AddPacket(p *packet.Packet){
@@ -42,6 +67,3 @@ func (s *Scheduler) AddPacket(p *packet.Packet){
 
 }
 
-func (s *Scheduler) CleanUp(){
-		delete(ActivePackets[UUID],p)
-}
