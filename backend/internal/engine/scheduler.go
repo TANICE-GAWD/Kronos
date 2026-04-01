@@ -12,7 +12,7 @@ type Scheduler struct{
 	ActivePackets map[uuid.UUID]*packet.Packet
 	mu sync.RWMutex
 	BlackHole packet.Point
-	UpdateChan chan map[uuid.UUID]*packet.Packet
+	UpdateChan chan map[uuid.UUID]packet.Packet // not using pointers coz it was causing jittery movement
 }
 
 
@@ -20,45 +20,52 @@ func NewScheduler(blackHole packet.Point) *Scheduler {
 	return &Scheduler{
 		ActivePackets: make(map[uuid.UUID]*packet.Packet), 
 		BlackHole:     blackHole,
-		UpdateChan:    make(chan map[uuid.UUID]*packet.Packet), 
+		UpdateChan:    make(chan map[uuid.UUID]packet.Packet), 
 	}
 }
 
-func (s *Scheduler) Start(){
+func (s *Scheduler) Start(stopChan <-chan struct{}){
 	tick := time.NewTicker(time.Second/60)
 	last := time.Now()
 
 	defer tick.Stop()
 	
-	for range tick.C{
-		keysToDelete := []uuid.UUID{}
+	for {
+		select{
+		case <-tick.C:
+			keysToDelete := []uuid.UUID{}
 		
-		now:= time.Now()
-		deltaTime := now.Sub(last).Seconds()
-		last = now
-		s.mu.Lock()
-		for key, p := range s.ActivePackets{
-			RunPhysics(p, s.BlackHole, deltaTime)
-			if(p.Status == packet.Settled || p.Status == packet.Destroyed){
-				keysToDelete = append(keysToDelete,key)
+			now:= time.Now()
+			deltaTime := now.Sub(last).Seconds()
+			last = now
+			s.mu.Lock()
+			for key, p := range s.ActivePackets{
+				RunPhysics(p, s.BlackHole, deltaTime)
+				if(p.Status == packet.Settled || p.Status == packet.Destroyed){
+					keysToDelete = append(keysToDelete,key)
+				}
 			}
-		}
+			
+			for _, key := range keysToDelete{
+				delete(s.ActivePackets,key)
+			}
+
+			s.mu.Unlock()
+
+			if s.UpdateChan != nil {
+				stateCopy := s.GetState()
+
+				select{
+				case s.UpdateChan <- stateCopy:
+				default:
+				}
+			}
+			
 		
-		for _, key := range keysToDelete{
-			delete(s.ActivePackets,key)
+		case <-stopChan:
+			return
 		}
 
-		if s.UpdateChan != nil {
-			stateCopy := make(map[uuid.UUID]*packet.Packet)
-			for k,v := range s.ActivePackets{
-				stateCopy[k] = v
-			}
-			s.UpdateChan <- stateCopy
-		}
-
-
-		keysToDelete = nil
-		s.mu.Unlock()
 	}
 	
 	
@@ -73,13 +80,13 @@ func (s *Scheduler) AddPacket(p *packet.Packet){
 }
 
 // on demand call
-func (s *Scheduler) GetState() map[uuid.UUID]*packet.Packet{
+func (s *Scheduler) GetState() map[uuid.UUID]packet.Packet{
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	stateCopy := make(map[uuid.UUID]*packet.Packet)
+	stateCopy := make(map[uuid.UUID]packet.Packet)
 
 	for k, v := range s.ActivePackets {
-		stateCopy[k] = v
+		stateCopy[k] = *v
 	}
 
 	return stateCopy
