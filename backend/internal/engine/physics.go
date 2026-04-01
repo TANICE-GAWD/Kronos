@@ -4,7 +4,7 @@
 package engine
 
 import(
-	"models/packet"
+	"backend/internal/models/packet"
 	"time"
 )
 

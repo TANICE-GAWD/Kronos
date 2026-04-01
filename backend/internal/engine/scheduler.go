@@ -3,10 +3,9 @@ package engine
 
 import(
 	"time",
-	"models/packet"
+	"backend/internal/models/packet"
 	"sync"
 	"github.com/google/uuid"
-	"physics"
 )
 
 type Scheduler struct{
@@ -39,17 +38,23 @@ func (s *Scheduler) Start(){
 		last = now
 		s.mu.Lock()
 		for key, p := range s.ActivePackets{
-			physics.RunPhysics(p, s.BlackHole, deltaTime)
+			RunPhysics(p, s.BlackHole, deltaTime)
 			if(p.Status == packet.Settled || p.Status == packet.Destroyed){
-				keys = append(keysToDelete,key)
+				keysToDelete = append(keysToDelete,key)
 			}
 		}
 		
-		for _, key := range keys{
+		for _, key := range keysToDelete{
 			delete(s.ActivePackets,key)
 		}
 
-		
+		if s.UpdateChan != nil {
+			stateCopy := make(map[uuid.UUID]*packet.Packet)
+			for k,v := range s.ActivePackets{
+				stateCopy[k] = v
+			}
+			s.UpdateChan <- stateCopy
+		}
 
 
 		keysToDelete = nil
@@ -65,5 +70,18 @@ func (s *Scheduler) AddPacket(p *packet.Packet){
 	s.ActivePackets[p.ID] = p
 	
 
+}
+
+// on demand call
+func (s *Scheduler) GetState() map[uuid.UUID]*packet.Packet{
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	stateCopy := make(map[uuid.UUID]*packet.Packet)
+
+	for k, v := range s.ActivePackets {
+		stateCopy[k] = v
+	}
+
+	return stateCopy
 }
 
