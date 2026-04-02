@@ -41,7 +41,7 @@ type Packet struct {
 	CurrentPos Point     `json:"current_pos"`
 	Payload    Payload   `json:"payload"`
 	LaunchTime time.Time `json:"launch_time"`
-	ETA        time.Time `json:"eta"`
+	// ETA        time.Time `json:"eta"`
 	Status     EnumStatus `json:"status"`
 	DilationFactor float64 `json:"dilationfactor"`
 	Velocity       float64   `json:"velocity"`

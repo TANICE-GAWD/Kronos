@@ -10,7 +10,7 @@ import(
 
 const SpeedOfLight float64 = 50.0 // speed of light....but made unitary..299,792,458 m/s
 
-const Pull_r float64 = 40.0 // define pull rad for Blackhoel
+const Pull_r float64 = 40.0 
 const Time_dil = 0.3 
 
 const ArrivalThreshold = 1.0
