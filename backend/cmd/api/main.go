@@ -80,7 +80,7 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
 	}
 
 	scheduler.AddPacket(p)
-	ctx.JSON(http.StatusOk, gin.H{"id" : id, "status" : "active"})
+	ctx.JSON(http.StatusOK, gin.H{"id" : id, "status" : "active"})
 
 
 }

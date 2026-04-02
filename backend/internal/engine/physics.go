@@ -5,7 +5,6 @@ package engine
 
 import(
 	"backend/internal/models/packet"
-	"time"
 )
 
 const SpeedOfLight float64 = 50.0 // speed of light....but made unitary..299,792,458 m/s
@@ -34,7 +33,7 @@ func GetPlanetPosition(name string ) packet.Point{
 
 func Direction(p packet.Packet, target packet.Point) (packet.Point, float64) {
 
-	dist := packet.Distance(p.CurrentPos, target)
+	dist := p.Distance(p.CurrentPos, target)
 
 	if dist == 0 {
 		return packet.Point{}, 0
@@ -74,7 +73,7 @@ func RunPhysics(p *packet.Packet, blackHole packet.Point, deltaTime float64) {
 	}
 
 	
-	target := GetPlanetPosition(p.Destination)
+	target := GetPlanetPosition(p.DestinationPlanet)
 
 	
 	UpdatePos(p, target, deltaTime)
@@ -87,7 +86,7 @@ func RunPhysics(p *packet.Packet, blackHole packet.Point, deltaTime float64) {
 
 func ApplyGravity(p *packet.Packet, blackHolePos packet.Point) {
 
-	dist := packet.Distance(p.CurrentPos, blackHolePos)
+	dist := p.Distance(p.CurrentPos, blackHolePos)
 
 	if dist <= Pull_r {
 		p.Status = packet.Destroyed
@@ -112,7 +111,7 @@ func ApplyGravity(p *packet.Packet, blackHolePos packet.Point) {
 
 func CheckArrival(p *packet.Packet, target packet.Point) {
 
-	dist := packet.Distance(p.CurrentPos, target)
+	dist := p.Distance(p.CurrentPos, target)
 
 	if dist < ArrivalThreshold {
 		p.Status = packet.Settled
