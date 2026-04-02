@@ -1,0 +1,9 @@
+POST Request: A user clicks "Send" on the frontend.
+
+Creation: TransferHandler calculates the 3D vector and hands the packet to the Scheduler.
+
+The Heartbeat: Every 16.6ms, the Scheduler updates the XYZ coordinates based on  Physics laws.
+
+The Stream: The Hub broadcasts these coordinates via WebSockets.
+
+Visualization: Three.js receives the JSON and moves a mesh to the new (x,y,z).
