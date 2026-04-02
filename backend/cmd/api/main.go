@@ -5,12 +5,13 @@ import(
 	"backend/internal/engine"
 	"backend/internal/transport"
 	"github.com/google/uuid"
-	"backend/internal/models/package"
+	"backend/internal/models/packet"
 	"time"
 )
 
+var BlackHole = packet.Point{X: 10, Y: 10, Z:10}
+
 const(
-	BlackHole Packet.Point = (10,10,10)
 	SpeedOfLight float64 = 50.0
 )
 
@@ -23,58 +24,63 @@ type TransferRequest struct{
 	OriginPlanet      string  `json:"origin_planet" binding:"required"`
     DestinationPlanet string  `json:"destination_planet" binding:"required"`
     Amount            float64 `json:"amount" binding:"required,gt=0"`
+	CurrencyID		  string   `json:"currency_id" binding:"required"`
 }
 
 func main(){
 	r := gin.Default()
-	
-	r.Run(":8080")
 	hub := transport.NewHub()
 	scheduler := engine.NewScheduler(BlackHole)
 	go hub.Run();
-	scheduler.Start()
+	stop := make(chan struct{})
+	go scheduler.Start(stop)
 
 	go func(){
-		for{
-			select{
-			case stateSnapshot := <-scheduler.UpdateChan:
-				hub.broadcast <- stateSnapshot
-			}
-		default:
-			return
+		for stateSnapshot := range scheduler.UpdateChan {
+			hub.Broadcast(stateSnapshot)
 		}
 	}()
 
-	r.POST("/transfer", TransferHandler(scheduler))
+	r.POST("/transfer", func(ctx *gin.Context) {
+		TransferHandler(ctx, scheduler)
+	})
+	r.GET("/ws", func(ctx *gin.Context) {
+		transport.ServeWS(ctx, uuid.New().String(), hub)
+	})
+
+	r.Run(":8080")
 
 }
 
 func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
 	var req TransferRequest
-	if err := c.ShouldBindJSON(&req); err != nil{
-		c.JSON(http.StatusBadRequest, gin.H(err.Error()))
+	if err := ctx.ShouldBindJSON(&req); err != nil{
+		ctx.JSON(http.StatusBadRequest, gin.H{"error" : err.Error()})
 		return
 	}
 
-	originPos := physics.GetPlanetPosition(req.OriginPlanet)
-	destPos := physics.GetPlanetPosition(req.DestinationPlanet)
+	originPos := engine.GetPlanetPosition(req.OriginPlanet)
+	destPos := engine.GetPlanetPosition(req.DestinationPlanet)
 	id := uuid.New()
 
-	packet := packet.Packet{
+	p := &packet.Packet{
 		ID : id,
-		Start : originPos
-		End : destPos
-		DestinationPlanet : req.DestinationPlanet
+		Start : originPos,
+		End : destPos,
+		DestinationPlanet : req.DestinationPlanet,
 		CurrentPos : originPos,
-		Payload : req.Amount,
+		Payload: packet.Payload{
+					Amount: req.Amount,
+					CurrencyID: req.CurrencyID,
+					},
 		LaunchTime : time.Now(),
-		Status : package.Active,
+		Status : packet.Active,
 		DilationFactor : 1,
 		Velocity : SpeedOfLight,
 	}
 
-	scheduler.AddPacket(packet)
-	c.JSON(http.StatusOk, gin.H{"id" : id, "status" : "Active"})
+	scheduler.AddPacket(p)
+	ctx.JSON(http.StatusOk, gin.H{"id" : id, "status" : "active"})
 
 
 }

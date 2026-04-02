@@ -48,4 +48,6 @@ func (h *Hub) Run(){
 }
 
 
-
+func (h *Hub) Broadcast(state map[uuid.UUID]packet.Packet) {
+	h.broadcast <- state
+}
