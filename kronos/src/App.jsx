@@ -3,8 +3,7 @@ import Sun from "./components/Sun";
 import Planet from "./components/Planet";
 import { Stars, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
-import BlackHole from "./blackhole/blackhole";
-import "./blackhole/style.css"
+
 function App(){
 
   const planets = [
