@@ -9,7 +9,7 @@ import(
 	"time"
 )
 
-var BlackHole = packet.Point{X: 10, Y: 10, Z:10}
+var BlackHole = packet.Point{X: 0, Y: 0, Z: 100}
 
 const(
 	SpeedOfLight float64 = 50.0
@@ -45,7 +45,9 @@ func main(){
 		TransferHandler(ctx, scheduler)
 	})
 	r.GET("/ws", func(ctx *gin.Context) {
-		transport.ServeWS(ctx, uuid.New().String(), hub)
+		// Send current state to new client immediately
+		currentState := scheduler.GetState()
+		transport.ServeWS(ctx, uuid.New().String(), hub, currentState)
 	})
 
 	r.Run(":8080")

@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import Sun from "./components/Sun";
 import Planet from "./components/Planet";
 import BlackHole from "./components/BlackHole";
+import StarCreditManager from "./components/StarCreditManager";
 import { Stars, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 
 function App(){
+  const [creditsInFlight, setCreditsInFlight] = useState(0);
 
   const planets = [
     { name: "Mercury", radius: 0.25, distance: 3, speed: 2.0 },
@@ -18,7 +21,8 @@ function App(){
   ];
 
   return(
-    <Canvas camera={{ position: [0, 10, 20], fov: 45 }}>
+    <>
+      <Canvas camera={{ position: [0, 10, 20], fov: 45 }}>
 
       <ambientLight intensity={3}/>
       <directionalLight position={[5, 5, 5]} intensity={1.5} />
@@ -31,7 +35,7 @@ function App(){
 
       <Stars radius={1300} depth={1000} count={6000} factor={4} saturation={0.4} fade speed={0.3} />
 
-      <BlackHole position={[35, 0, 0]} />
+      <BlackHole position={[0, 0, 100]} />
 
       <OrbitControls
         enablePan
@@ -50,7 +54,16 @@ function App(){
         }}
       />
 
-    </Canvas>
+      <StarCreditManager setTotalCredits={setCreditsInFlight} />
+
+      </Canvas>
+
+      <div className="hud">
+        <div className="hud-box">
+          <strong>Credits in Flight:</strong> {creditsInFlight}
+        </div>
+      </div>
+    </>
   )
 }
 

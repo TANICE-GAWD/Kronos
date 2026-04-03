@@ -116,7 +116,7 @@ func (c *Client) Close(){
 	close(c.send)
 }
 
-func ServeWS(ctx *gin.Context, roomID string, hub *Hub){
+func ServeWS(ctx *gin.Context, roomID string, hub *Hub, initialState map[uuid.UUID]packet.Packet){
 	ws, err := upgrader.Upgrade(ctx.Writer, ctx.Request, nil)
 	if err != nil{
 		fmt.Println(err.Error())
@@ -126,6 +126,13 @@ func ServeWS(ctx *gin.Context, roomID string, hub *Hub){
 	client := NewClient(roomID, ws ,hub)
 
 	hub.register <- client
+
+	if initialState != nil && len(initialState) > 0 {
+		err := client.Conn.WriteJSON(initialState)
+		if err != nil {
+			log.Println("Error sending initial state:", err)
+		}
+	}
 
 	go client.Write()
 	go client.Read()

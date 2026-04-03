@@ -6,6 +6,7 @@ import(
 	"backend/internal/models/packet"
 	"sync"
 	"github.com/google/uuid"
+	"fmt"
 )
 
 type Scheduler struct{
@@ -20,7 +21,7 @@ func NewScheduler(blackHole packet.Point) *Scheduler {
 	return &Scheduler{
 		ActivePackets: make(map[uuid.UUID]*packet.Packet), 
 		BlackHole:     blackHole,
-		UpdateChan:    make(chan map[uuid.UUID]packet.Packet), 
+		UpdateChan:    make(chan map[uuid.UUID]packet.Packet, 16), 
 	}
 }
 
@@ -47,6 +48,7 @@ func (s *Scheduler) Start(stopChan <-chan struct{}){
 			}
 			
 			for _, key := range keysToDelete{
+				fmt.Printf("[Scheduler] Removing packet %s with status %s\n", key, s.ActivePackets[key].Status)
 				delete(s.ActivePackets,key)
 			}
 
@@ -54,10 +56,12 @@ func (s *Scheduler) Start(stopChan <-chan struct{}){
 
 			if s.UpdateChan != nil {
 				stateCopy := s.GetState()
-
-				select{
-				case s.UpdateChan <- stateCopy:
-				default:
+				if len(stateCopy) > 0 {
+					// fmt.Printf("[Scheduler] Broadcasting %d packets\n", len(stateCopy))
+					select{
+					case s.UpdateChan <- stateCopy:
+					default:
+					}
 				}
 			}
 			
@@ -75,8 +79,7 @@ func (s *Scheduler) AddPacket(p *packet.Packet){
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.ActivePackets[p.ID] = p
-	
-
+	fmt.Printf("[Scheduler] Added packet %s from %v to %v\n", p.ID, p.Start, p.End)
 }
 
 // on demand call

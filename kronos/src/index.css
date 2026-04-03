@@ -9,3 +9,22 @@ body,
   background-color: black;
   font-family: system-ui, sans-serif;
 }
+
+.hud {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.hud-box {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 215, 0, 0.7);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: clamp(0.78rem, 1vw, 1rem);
+  font-family: "Consolas", "Courier New", monospace;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.46);
+}
