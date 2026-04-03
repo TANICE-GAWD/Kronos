@@ -1,6 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import Sun from "./components/Sun";
 import Planet from "./components/Planet";
+import BlackHole from "./components/BlackHole";
 import { Stars, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -27,6 +28,10 @@ function App(){
       {planets.map((planet) => (
         <Planet key={planet.name} {...planet} />
       ))}
+
+      <Stars radius={1300} depth={1000} count={6000} factor={4} saturation={0.4} fade speed={0.3} />
+
+      <BlackHole position={[35, 0, 0]} />
 
       <OrbitControls
         enablePan
