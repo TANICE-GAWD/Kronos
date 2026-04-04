@@ -61,20 +61,32 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
 		return
 	}
 
-	originPlanet, ok := engine.GetPlanet(req.OriginPlanet)
+	now := time.Now()
+
+	// originPlanet, ok := engine.GetPlanet(req.OriginPlanet)
+	// if !ok {
+	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown origin planet"})
+	// 	return
+	// }
+
+	// destPlanet, ok := engine.GetPlanet(req.DestinationPlanet)
+	// if !ok {
+	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown destination planet"})
+	// 	return
+	// }
+
+	originPos, ok := engine.GetPlanetPosition(req.OriginPlanet, now)
 	if !ok {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown origin planet"})
 		return
 	}
 
-	destPlanet, ok := engine.GetPlanet(req.DestinationPlanet)
+	destPos, ok := engine.GetPlanetPosition(req.DestinationPlanet, now)
 	if !ok {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown destination planet"})
 		return
 	}
 
-	originPos := originPlanet.Position
-	destPos := destPlanet.Position
 	id := uuid.New()
 
 	p := &packet.Packet{
@@ -95,6 +107,7 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
 
 	scheduler.AddPacket(p)
 	ctx.JSON(http.StatusOK, gin.H{"id" : id, "status" : "active"})
-
-
 }
+
+
+
