@@ -27,21 +27,17 @@ const Planet = ({
     const meshRef = useRef();
 
     useFrame((state, delta) => {
+      const now = Date.now() / 1000;
 
-        const elapsed = state.clock.getElapsedTime();
+      meshRef.current.rotation.y += delta * 0.8;
 
-        
-        meshRef.current.rotation.y += delta * 0.8;
+      const angle = now * speed;
 
-        
-        const angle = elapsed * speed;
+      meshRef.current.position.x =
+        distance * Math.cos(angle);
 
-        meshRef.current.position.x =
-            distance * Math.cos(angle);
-
-        meshRef.current.position.z =
-            distance * Math.sin(angle);
-
+      meshRef.current.position.z =
+        distance * Math.sin(angle);
     });
 
     return(

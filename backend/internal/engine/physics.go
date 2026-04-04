@@ -97,23 +97,14 @@ func UpdatePos(p *packet.Packet, target packet.Point, deltaTime float64) {
 	}
 
 	move := p.Velocity * p.DilationFactor * deltaTime
-	control := curveControlPoint(p.Start, target)
-	curveHeight := math.Abs(control.Y - p.Start.Y)
-	curveLength := dist + (curveHeight * 0.6)
-	if curveLength <= 0 {
-		curveLength = dist
-	}
-
-	deltaT := move / curveLength
-	p.TravelT += deltaT
-
-	if p.TravelT >= 1 {
-		p.TravelT = 1
+	if move >= dist {
 		p.CurrentPos = target
 		return
 	}
 
-	p.CurrentPos = bezierPoint(p.Start, control, target, p.TravelT)
+	control := curveControlPoint(p.CurrentPos, target)
+	t := math.Min(move/dist, 1)
+	p.CurrentPos = bezierPoint(p.CurrentPos, control, target, t)
 }
 
 // use for global websocket loop in engine/scheduler.go
@@ -122,7 +113,11 @@ func RunPhysics(p *packet.Packet, blackHole packet.Point, deltaTime float64) {
 		return
 	}
 
-	target := p.End
+	target, ok := GetPlanetPosition(p.DestinationPlanet, time.Now())
+	if !ok {
+		return
+	}
+
 	UpdatePos(p, target, deltaTime)
 
 	ApplyGravity(p, blackHole)
