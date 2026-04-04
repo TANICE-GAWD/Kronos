@@ -45,6 +45,7 @@ type Packet struct {
 	Status     EnumStatus `json:"status"`
 	DilationFactor float64 `json:"dilationfactor"`
 	Velocity       float64   `json:"velocity"`
+	TravelT        float64   `json:"travel_t"`
 }
 
 
