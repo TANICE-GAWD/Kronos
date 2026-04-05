@@ -8,6 +8,36 @@ const statusColors = {
   destroyed: 0xff4500,
 };
 
+const trailColors = {
+  active: 0xffd700,
+  stalled: 0x9400d3,
+  destroyed: 0xff4500,
+};
+
+function createTrailLine(status = "active") {
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(60 * 3); 
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setDrawRange(0, 0);
+
+  const color = new THREE.Color(trailColors[status] || trailColors.active);
+  const mat = new THREE.LineBasicMaterial({
+    color,
+    linewidth: 2,
+    transparent: true,
+    opacity: 0.7,
+    fog: true,
+  });
+
+  const line = new THREE.Line(geometry, mat);
+  line.userData = {
+    status,
+    material: mat,
+  };
+
+  return line;
+}
+
 function createPacketMesh(status = "active") {
   const group = new THREE.Group();
 
@@ -43,7 +73,7 @@ function createPacketMesh(status = "active") {
   return group;
 }
 
-function updateStatusVisuals(group, status) {
+function updateStatusVisuals(group, status, trailLine) {
   if (!group?.userData) return;
   const { material, light } = group.userData;
 
@@ -54,16 +84,25 @@ function updateStatusVisuals(group, status) {
     material.emissive.setHex(0x444400);
     light.color.setHex(0xffd700);
     light.intensity = 1.3;
+    if (trailLine?.userData?.material) {
+      trailLine.userData.material.color.setHex(trailColors.active);
+    }
   } else if (status === "stalled") {
     material.color.setHex(statusColors.stalled);
     material.emissive.setHex(0x280020);
     light.color.setHex(0x8b0000);
     light.intensity = 0.9;
+    if (trailLine?.userData?.material) {
+      trailLine.userData.material.color.setHex(trailColors.stalled);
+    }
   } else if (status === "destroyed") {
     material.color.setHex(statusColors.destroyed);
     material.emissive.setHex(0xffa500);
     light.color.setHex(0xff4500);
     light.intensity = 2.4;
+    if (trailLine?.userData?.material) {
+      trailLine.userData.material.color.setHex(trailColors.destroyed);
+    }
   }
 }
 
@@ -113,7 +152,7 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
 
       if (entry.status !== status) {
         entry.status = status;
-        updateStatusVisuals(entry.group, status);
+        updateStatusVisuals(entry.group, status, entry.trailLine);
       }
 
       if (status === "destroyed" && !entry.removalScheduled) {
@@ -123,6 +162,11 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
             const toRemove = packetMap.current.get(id);
             scene.remove(toRemove.group);
             disposeGroup(toRemove.group);
+            if (toRemove.trailLine) {
+              scene.remove(toRemove.trailLine);
+              if (toRemove.trailLine.geometry) toRemove.trailLine.geometry.dispose();
+              if (toRemove.trailLine.material) toRemove.trailLine.material.dispose();
+            }
             packetMap.current.delete(id);
             targetMap.current.delete(id);
             sendCount(packetMap.current.size);
@@ -135,11 +179,17 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
       group.position.copy(target);
       scene.add(group);
 
+      const trailLine = createTrailLine(status);
+      scene.add(trailLine);
+
       packetMap.current.set(id, {
         group,
         target,
         status,
         removalScheduled: status === "destroyed",
+        trailLine,
+        positionHistory: [target.clone()],
+        frameCounter: 0,
       });
 
       targetMap.current.set(id, target);
@@ -150,6 +200,11 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
             const toRemove = packetMap.current.get(id);
             scene.remove(toRemove.group);
             disposeGroup(toRemove.group);
+            if (toRemove.trailLine) {
+              scene.remove(toRemove.trailLine);
+              if (toRemove.trailLine.geometry) toRemove.trailLine.geometry.dispose();
+              if (toRemove.trailLine.material) toRemove.trailLine.material.dispose();
+            }
             packetMap.current.delete(id);
             targetMap.current.delete(id);
             sendCount(packetMap.current.size);
@@ -163,7 +218,7 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
   for (const [existingId, existingEntry] of packetMap.current.entries()) {
     if (!incomingIds.has(existingId) && existingEntry.status !== "destroyed") {
       console.log(`[processPacketData] removing missing packet ${existingId}`);
-      updateStatusVisuals(existingEntry.group, "destroyed");
+      updateStatusVisuals(existingEntry.group, "destroyed", existingEntry.trailLine);
       existingEntry.status = "destroyed";
       if (!existingEntry.removalScheduled) {
         existingEntry.removalScheduled = true;
@@ -172,6 +227,11 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
             const toRemove = packetMap.current.get(existingId);
             scene.remove(toRemove.group);
             disposeGroup(toRemove.group);
+            if (toRemove.trailLine) {
+              scene.remove(toRemove.trailLine);
+              if (toRemove.trailLine.geometry) toRemove.trailLine.geometry.dispose();
+              if (toRemove.trailLine.material) toRemove.trailLine.material.dispose();
+            }
             packetMap.current.delete(existingId);
             targetMap.current.delete(existingId);
             sendCount(packetMap.current.size);
@@ -281,6 +341,11 @@ export default function StarCreditManager({ setTotalCredits }) {
       packetMap.current.forEach((entry) => {
         scene.remove(entry.group);
         disposeGroup(entry.group);
+        if (entry.trailLine) {
+          scene.remove(entry.trailLine);
+          if (entry.trailLine.geometry) entry.trailLine.geometry.dispose();
+          if (entry.trailLine.material) entry.trailLine.material.dispose();
+        }
       });
       packetMap.current.clear();
       targetMap.current.clear();
@@ -293,6 +358,34 @@ export default function StarCreditManager({ setTotalCredits }) {
       if (!entry.group || !entry.target) continue;
 
       entry.group.position.lerp(entry.target, 0.1);
+
+      
+      entry.frameCounter++;
+      if (entry.frameCounter >= 2) {
+        entry.frameCounter = 0;
+        entry.positionHistory.push(entry.group.position.clone());
+        
+        if (entry.positionHistory.length > 20) {
+          entry.positionHistory.shift();
+        }
+      }
+
+      
+      if (entry.trailLine && entry.positionHistory.length > 1) {
+        const geometry = entry.trailLine.geometry;
+        const positions = geometry.attributes.position.array;
+        const pointCount = entry.positionHistory.length;
+
+        
+        for (let i = 0; i < pointCount; i++) {
+          const pos = entry.positionHistory[i];
+          positions[i * 3] = pos.x;
+          positions[i * 3 + 1] = pos.y;
+          positions[i * 3 + 2] = pos.z;
+        }
+        geometry.attributes.position.needsUpdate = true;
+        geometry.setDrawRange(0, pointCount - 1);
+      }
 
       if (entry.status === "destroyed") {
         entry.group.scale.lerp(new THREE.Vector3(2, 2, 2), 0.08);
