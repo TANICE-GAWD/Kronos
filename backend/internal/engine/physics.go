@@ -15,7 +15,7 @@ const SpeedOfLight float64 = 50.0 // speed of light....but made unitary..299,792
 const Pull_r float64 = 40.0 
 const Time_dil = 0.3 
 
-const ArrivalThreshold = 1.0
+const ArrivalThreshold = 0.5
 
 
 type Planet struct {
@@ -83,16 +83,27 @@ func bezierPoint(p0, p1, p2 packet.Point, t float64) packet.Point {
 }
 
 func curveControlPoint(start, end packet.Point) packet.Point {
+	dist := math.Sqrt(
+		math.Pow(end.X-start.X, 2)+
+		math.Pow(end.Y-start.Y, 2)+
+		math.Pow(end.Z-start.Z, 2),
+	)
+	height := math.Min(0.5+dist*0.05, 1.2)
 	return packet.Point{
 		X: (start.X + end.X) / 2,
-		Y: (start.Y + end.Y) / 2 + 6,
+		Y: (start.Y + end.Y) / 2 + height,
 		Z: (start.Z + end.Z) / 2,
 	}
 }
 
 func UpdatePos(p *packet.Packet, target packet.Point, deltaTime float64) {
-	_, dist := Direction(*p, target)
+	dir, dist := Direction(*p, target)
 	if dist == 0 {
+		return
+	}
+
+	if dist <= ArrivalThreshold {
+		p.CurrentPos = target
 		return
 	}
 
@@ -102,6 +113,14 @@ func UpdatePos(p *packet.Packet, target packet.Point, deltaTime float64) {
 		return
 	}
 
+	if dist <= 6.0 {
+		p.CurrentPos.X += dir.X * move
+		p.CurrentPos.Y += dir.Y * move
+		p.CurrentPos.Z += dir.Z * move
+		return
+	}
+
+	// Keep a small curve at long distance, but pursue the current moving target.
 	control := curveControlPoint(p.CurrentPos, target)
 	t := math.Min(move/dist, 1)
 	p.CurrentPos = bezierPoint(p.CurrentPos, control, target, t)
@@ -147,7 +166,7 @@ func ApplyGravity(p *packet.Packet, blackHolePos packet.Point) {
 func CheckArrival(p *packet.Packet, target packet.Point) {
 	dist := p.Distance(p.CurrentPos, target)
 
-	if dist < ArrivalThreshold {
+	if dist <= ArrivalThreshold {
 		p.Status = packet.Settled
 	}
 }
