@@ -15,7 +15,7 @@ const Pull_r float64 = 40.0
 const Time_dil = 0.3 
 
 
-const ArrivalThreshold = 5.0
+const ArrivalThreshold = 25.0
 
 
 type Planet struct {
@@ -115,7 +115,7 @@ func UpdatePos(p *packet.Packet, target packet.Point, deltaTime float64) {
 		return
 	}
 
-	if dist <= 6.0 {
+	if dist <= 100.0 {
 		p.CurrentPos.X += dir.X * move
 		p.CurrentPos.Y += dir.Y * move
 		p.CurrentPos.Z += dir.Z * move
