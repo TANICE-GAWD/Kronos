@@ -16,7 +16,8 @@ const Planet = ({
     name,
     radius,
     distance,
-    speed
+    speed,
+    onPositionUpdate
 }) => {
 
     const texture = useLoader(
@@ -38,6 +39,11 @@ const Planet = ({
 
       meshRef.current.position.z =
         distance * Math.sin(angle);
+
+      // Report position updates for camera following
+      if (onPositionUpdate) {
+        onPositionUpdate(name, meshRef.current.position);
+      }
     });
 
     return(

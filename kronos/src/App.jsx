@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import Sun from "./components/Sun";
 import Planet from "./components/Planet";
 import BlackHole from "./components/BlackHole";
 import OrbitLine from "./components/OrbitLine";
 import StarCreditManager from "./components/StarCreditManager";
+import FollowPlanetTab from "./components/FollowPlanetTab";
+import PlanetFollowCamera from "./components/PlanetFollowCamera";
 import { Stars, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 
 function App(){
   const [creditsInFlight, setCreditsInFlight] = useState(0);
+  const [followedPlanet, setFollowedPlanet] = useState(null);
+  const planetPositionsRef = useRef({});
 
   
 
@@ -30,6 +34,14 @@ function App(){
     camera.updateProjectionMatrix();
   };
 
+  const handlePlanetPositionUpdate = (planetName, position) => {
+    planetPositionsRef.current[planetName] = {
+      x: position.x,
+      y: position.y,
+      z: position.z,
+    };
+  };
+
   return(
     <>
       <Canvas camera={{ position: [0, 500, 1500], fov: 45 }} onCreated={handleCanvasCreated}>
@@ -44,17 +56,27 @@ function App(){
       ))}
 
       {planets.map((planet) => (
-        <Planet key={planet.name} {...planet} />
+        <Planet 
+          key={planet.name} 
+          {...planet} 
+          onPositionUpdate={handlePlanetPositionUpdate}
+        />
       ))}
 
       <Stars radius={8000} depth={2000} count={6000} factor={4} saturation={0.4} fade speed={0.3} />
 
       <BlackHole position={[0, 0, 500]} />
 
+      <PlanetFollowCamera 
+        followedPlanet={followedPlanet} 
+        planetPositionsRef={planetPositionsRef} 
+      />
+
       <OrbitControls
-        enablePan
-        enableRotate
-        enableZoom
+        enabled={!followedPlanet}
+        enablePan={!followedPlanet}
+        enableRotate={!followedPlanet}
+        enableZoom={!followedPlanet}
         panSpeed={2.5}
         rotateSpeed={1.0}
         zoomSpeed={1.0}
@@ -77,6 +99,12 @@ function App(){
           <strong>Credits in Flight:</strong> {creditsInFlight}
         </div>
       </div>
+
+      <FollowPlanetTab 
+        planets={planets}
+        onPlanetSelect={setFollowedPlanet}
+        followedPlanet={followedPlanet}
+      />
     </>
   )
 }
