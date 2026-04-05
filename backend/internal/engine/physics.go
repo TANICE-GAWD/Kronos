@@ -1,6 +1,4 @@
-// defining Laws of the Universe
 
-// providing scale factor
 package engine
 
 import(
@@ -10,12 +8,14 @@ import(
 	"time"
 )
 
-const SpeedOfLight float64 = 50.0 // speed of light....but made unitary..299,792,458 m/s
+// Scale: 1 AU = 100 world units.
+const SpeedOfLight float64 = 50.0 // speed of light....but made unitary..299,792,458 m/s (scale-independent)
 
 const Pull_r float64 = 40.0 
 const Time_dil = 0.3 
 
-const ArrivalThreshold = 0.5
+
+const ArrivalThreshold = 5.0
 
 
 type Planet struct {
@@ -25,14 +25,16 @@ type Planet struct {
 	InitialAngle float64 `json:"initial_angle"`
 }
 
+
 var Planets = map[string]Planet{
-	"mercury": {Name: "mercury", Distance: 3, Speed: 2.0, InitialAngle: 0},
-	"venus":   {Name: "venus", Distance: 4.5, Speed: 1.6, InitialAngle: 0},
-	"earth":   {Name: "earth", Distance: 6, Speed: 1.0, InitialAngle: 0},
-	"mars":    {Name: "mars", Distance: 8, Speed: 0.8, InitialAngle: 0},
-	"jupiter": {Name: "jupiter", Distance: 12, Speed: 0.4, InitialAngle: 0},
-	"uranus":  {Name: "uranus", Distance: 20, Speed: 0.2, InitialAngle: 0},
-	"neptune": {Name: "neptune", Distance: 24, Speed: 0.15, InitialAngle: 0},
+	"mercury": {Name: "mercury", Distance: 39, Speed: 0.82, InitialAngle: 0},
+	"venus":   {Name: "venus", Distance: 72, Speed: 0.32, InitialAngle: 0},
+	"earth":   {Name: "earth", Distance: 100, Speed: 0.20, InitialAngle: 0},
+	"mars":    {Name: "mars", Distance: 152, Speed: 0.11, InitialAngle: 0},
+	"jupiter": {Name: "jupiter", Distance: 520, Speed: 0.017, InitialAngle: 0},
+	"saturn":  {Name: "saturn", Distance: 954, Speed: 0.0067, InitialAngle: 0},
+	"uranus":  {Name: "uranus", Distance: 1919, Speed: 0.0024, InitialAngle: 0},
+	"neptune": {Name: "neptune", Distance: 3007, Speed: 0.0012, InitialAngle: 0},
 }
 
 func GetPlanet(name string) (Planet, bool) {

@@ -10,19 +10,21 @@ import * as THREE from "three";
 function App(){
   const [creditsInFlight, setCreditsInFlight] = useState(0);
 
+  
   const planets = [
-    { name: "Mercury", radius: 0.25, distance: 3, speed: 2.0 },
-    { name: "Venus", radius: 0.45, distance: 4.5, speed: 1.6 },
-    { name: "Earth", radius: 0.5, distance: 6, speed: 1.0 },
-    { name: "Mars", radius: 0.35, distance: 8, speed: 0.8 },
-    { name: "Jupiter", radius: 1.2, distance: 12, speed: 0.4 },
-    { name: "Uranus", radius: 0.7, distance: 20, speed: 0.2 },
-    { name: "Neptune", radius: 0.7, distance: 24, speed: 0.15 },
+    { name: "Mercury", radius: 0.25, distance: 39, speed: 0.82 },
+    { name: "Venus", radius: 0.45, distance: 72, speed: 0.32 },
+    { name: "Earth", radius: 0.5, distance: 100, speed: 0.20 },
+    { name: "Jupiter", radius: 1.2, distance: 520, speed: 0.017 },
+    { name: "Mars", radius: 0.35, distance: 152, speed: 0.11 },
+    { name: "Saturn", radius: 1.0, distance: 954, speed: 0.0067 },
+    { name: "Uranus", radius: 0.7, distance: 1919, speed: 0.0024 },
+    { name: "Neptune", radius: 0.7, distance: 3007, speed: 0.0012 },
   ];
 
   return(
     <>
-      <Canvas camera={{ position: [0, 10, 20], fov: 45 }}>
+      <Canvas camera={{ position: [0, 500, 1500], fov: 45 }}>
 
       <ambientLight intensity={3}/>
       <directionalLight position={[5, 5, 5]} intensity={1.5} />
@@ -33,9 +35,9 @@ function App(){
         <Planet key={planet.name} {...planet} />
       ))}
 
-      <Stars radius={1300} depth={1000} count={6000} factor={4} saturation={0.4} fade speed={0.3} />
+      <Stars radius={4000} depth={1000} count={6000} factor={4} saturation={0.4} fade speed={0.3} />
 
-      <BlackHole position={[0, 0, 100]} />
+      <BlackHole position={[0, 0, 500]} />
 
       <OrbitControls
         enablePan
@@ -44,8 +46,8 @@ function App(){
         panSpeed={2.5}
         rotateSpeed={1.0}
         zoomSpeed={1.0}
-        minDistance={2}
-        maxDistance={1000}
+        minDistance={50}
+        maxDistance={5000}
         autoRotateSpeed={0.4}
         mouseButtons={{
           LEFT: THREE.MOUSE.ROTATE,
