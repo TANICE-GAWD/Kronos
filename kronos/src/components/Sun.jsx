@@ -28,7 +28,7 @@ const Sun = () => {
 
     return(
         <mesh ref={meshRef}>
-        <sphereGeometry args = {[1.4,32,32]}/>
+        <sphereGeometry args = {[28,32,32]}/>
         <meshStandardMaterial  map={SunTexture}/>
 
 
