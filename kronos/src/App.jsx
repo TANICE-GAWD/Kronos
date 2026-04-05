@@ -25,7 +25,8 @@ function App(){
   ];
 
   const handleCanvasCreated = ({ camera }) => {
-    camera.far = 50000;
+    camera.far = 100000;
+    camera.near = 0.1;
     camera.updateProjectionMatrix();
   };
 
@@ -58,7 +59,7 @@ function App(){
         rotateSpeed={1.0}
         zoomSpeed={1.0}
         minDistance={50}
-        maxDistance={15000}
+        maxDistance={40000}
         autoRotateSpeed={0.4}
         mouseButtons={{
           LEFT: THREE.MOUSE.ROTATE,
