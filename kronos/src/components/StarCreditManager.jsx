@@ -89,7 +89,7 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
   const incomingIds = new Set(Object.keys(data));
   console.log("[processPacketData] processing", incomingIds.size, "packets");
 
-  // Birth or update
+  
   for (const id of incomingIds) {
     const packet = data[id];
     console.log(`[processPacketData] packet ${id}:`, packet);
@@ -159,7 +159,7 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
     }
   }
 
-  // Death: remove missing IDs
+  
   for (const [existingId, existingEntry] of packetMap.current.entries()) {
     if (!incomingIds.has(existingId) && existingEntry.status !== "destroyed") {
       console.log(`[processPacketData] removing missing packet ${existingId}`);
@@ -210,7 +210,7 @@ export default function StarCreditManager({ setTotalCredits }) {
     isConnectingRef.current = true;
 
     try {
-      const ws = new WebSocket("ws://localhost:8080/ws");
+      const ws = new WebSocket("ws:
       wsRef.current = ws;
 
       ws.onopen = () => {
