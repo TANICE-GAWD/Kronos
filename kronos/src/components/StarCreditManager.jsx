@@ -275,32 +275,17 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
 function createMultipleFloatingEyes(scene) {
   const eyesArray = [];
   const totalEyes = 50;
-  const orbitingEyes = 5;
-  const staticEyes = totalEyes - orbitingEyes;
-  
-  // Fibonacci sphere for uniform distribution
-  function getFibonacciSpherePoint(i, n) {
-    const phi = Math.acos(1 - (2 * i) / n);
-    const theta = Math.sqrt(n * Math.PI) * phi;
-    return { phi, theta };
-  }
 
-  // Create orbiting eyes (5 of them)
-  for (let i = 0; i < orbitingEyes; i++) {
-    const eye = createSingleEye(scene, true, i);
-    eyesArray.push(eye);
-  }
-
-  // Create static eyes (45 of them) distributed uniformly
-  for (let i = 0; i < staticEyes; i++) {
-    const eye = createSingleEye(scene, false, i);
+  // Create static eyes (50 of them) distributed uniformly
+  for (let i = 0; i < totalEyes; i++) {
+    const eye = createSingleEye(scene, i);
     eyesArray.push(eye);
   }
 
   return eyesArray;
 }
 
-function createSingleEye(scene, isOrbiting = false, index = 0) {
+function createSingleEye(scene, index = 0) {
   const eyeGroup = new THREE.Group();
 
   // White of the eye - elongated sphere
@@ -358,34 +343,23 @@ function createSingleEye(scene, isOrbiting = false, index = 0) {
   spotlight.position.set(0, 0, 800);
   eyeGroup.add(spotlight);
 
-  // Calculate position based on Fibonacci sphere distribution
-  if (isOrbiting) {
-    // Orbiting eyes get positioned on a specific orbit
-    const orbitPhase = (index / 5) * Math.PI * 2;
-    eyeGroup.position.set(
-      Math.cos(orbitPhase) * 16000,
-      Math.sin(orbitPhase) * 8000,
-      Math.sin(orbitPhase * 1.5) * 12000
-    );
-  } else {
-    // Static eyes - uniformly distributed on Fibonacci sphere
-    // Golden angle in radians (prevents clustering)
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-    
-    // Get position on unit sphere using Fibonacci sphere algorithm
-    const theta = Math.acos(1 - (2 * (index + 5)) / 50); // +5 to skip orbiting eyes
-    const phi = ((index + 5) % 50) * goldenAngle;
-    
-    // Radius at the midpoint between star sphere (5000) and text cube (25000)
-    const radius = 15000;
-    
-    // Convert spherical to Cartesian coordinates
-    const x = Math.cos(phi) * Math.sin(theta) * radius;
-    const y = Math.sin(phi) * Math.sin(theta) * radius;
-    const z = Math.cos(theta) * radius;
-    
-    eyeGroup.position.set(x, y, z);
-  }
+  // Static eyes - uniformly distributed on Fibonacci sphere
+  // Golden angle in radians (prevents clustering)
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  
+  // Get position on unit sphere using Fibonacci sphere algorithm
+  const theta = Math.acos(1 - (2 * index) / 50);
+  const phi = (index % 50) * goldenAngle;
+  
+  // Radius at the midpoint between star sphere (5000) and text cube (25000)
+  const radius = 15000;
+  
+  // Convert spherical to Cartesian coordinates
+  const x = Math.cos(phi) * Math.sin(theta) * radius;
+  const y = Math.sin(phi) * Math.sin(theta) * radius;
+  const z = Math.cos(theta) * radius;
+  
+  eyeGroup.position.set(x, y, z);
 
   scene.add(eyeGroup);
 
@@ -396,7 +370,6 @@ function createSingleEye(scene, isOrbiting = false, index = 0) {
     glow,
     spotlight,
     time: 0,
-    isOrbiting,
     index,
   };
 }
@@ -810,14 +783,8 @@ export default function StarCreditManager({ setTotalCredits }) {
         eye.spotlight.intensity = 1.5 + Math.sin(eye.time + eye.index) * 0.4;
         eye.glow.material.opacity = 0.4 + Math.sin(eye.time * 1.5 + eye.index) * 0.2;
 
-        // Face direction based on type
-        if (eye.isOrbiting) {
-          // Orbiting eyes look at the center (origin)
-          eye.group.lookAt(0, 0, 0);
-        } else {
-          // Static eyes follow the camera
-          eye.group.lookAt(camera.position);
-        }
+        // All eyes follow the camera
+        eye.group.lookAt(camera.position);
       });
     }
     
