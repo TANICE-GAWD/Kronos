@@ -718,7 +718,7 @@ export default function StarCreditManager({ setTotalCredits }) {
     };
   }, [scene]);
 
-  useFrame(() => {
+  useFrame(({ camera }) => {
     for (const [id, entry] of packetMap.current.entries()) {
       if (!entry.group || !entry.target) continue;
 
@@ -810,8 +810,14 @@ export default function StarCreditManager({ setTotalCredits }) {
         eye.spotlight.intensity = 1.5 + Math.sin(eye.time + eye.index) * 0.4;
         eye.glow.material.opacity = 0.4 + Math.sin(eye.time * 1.5 + eye.index) * 0.2;
 
-        // Face the center (origin)
-        eye.group.lookAt(0, 0, 0);
+        // Face direction based on type
+        if (eye.isOrbiting) {
+          // Orbiting eyes look at the center (origin)
+          eye.group.lookAt(0, 0, 0);
+        } else {
+          // Static eyes follow the camera
+          eye.group.lookAt(camera.position);
+        }
       });
     }
     
