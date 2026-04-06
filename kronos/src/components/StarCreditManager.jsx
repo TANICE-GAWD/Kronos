@@ -15,33 +15,56 @@ const trailColors = {
 };
 
 function createTrailLine(status = "active") {
-  const geometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(60 * 3); 
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setDrawRange(0, 0);
+  
+  const curve = new THREE.LineCurve3(
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 0, 1)
+  );
 
-  const color = new THREE.Color(trailColors[status] || trailColors.active);
-  const mat = new THREE.LineBasicMaterial({
-    color,
-    linewidth: 2,
+  const geometry = new THREE.TubeGeometry(curve, 8, 2, 8, false);
+
+  
+  const colors = [];
+  const colorObj = new THREE.Color(trailColors[status] || trailColors.active);
+  const positionAttribute = geometry.getAttribute("position");
+
+  for (let i = 0; i < positionAttribute.count; i++) {
+    const alpha = i / positionAttribute.count;
+    
+    colors.push(colorObj.r * alpha, colorObj.g * alpha, colorObj.b * alpha);
+  }
+
+  geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 3));
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: trailColors[status] || trailColors.active,
+    emissiveIntensity: 2,
     transparent: true,
-    opacity: 0.7,
-    fog: true,
+    opacity: 0.8,
+    roughness: 0.3,
+    metalness: 0.9,
+    wireframe: false,
+    vertexColors: true,
   });
 
-  const line = new THREE.Line(geometry, mat);
-  line.userData = {
+  const mesh = new THREE.Mesh(geometry, mat);
+  mesh.castShadow = true;
+
+  mesh.userData = {
     status,
     material: mat,
+    baseGeometry: geometry,
+    basePositions: geometry.getAttribute("position").array,
   };
 
-  return line;
+  return mesh;
 }
 
 function createPacketMesh(status = "active") {
   const group = new THREE.Group();
 
-  const geo = new THREE.IcosahedronGeometry(0.35, 1);
+  const geo = new THREE.IcosahedronGeometry(5, 1);
   const mat = new THREE.MeshStandardMaterial({
     color: statusColors[status] || statusColors.active,
     emissive: 0x222222,
@@ -84,24 +107,24 @@ function updateStatusVisuals(group, status, trailLine) {
     material.emissive.setHex(0x444400);
     light.color.setHex(0xffd700);
     light.intensity = 1.3;
-    if (trailLine?.userData?.material) {
-      trailLine.userData.material.color.setHex(trailColors.active);
+    if (trailLine?.material) {
+      trailLine.material.emissive.setHex(trailColors.active);
     }
   } else if (status === "stalled") {
     material.color.setHex(statusColors.stalled);
     material.emissive.setHex(0x280020);
     light.color.setHex(0x8b0000);
     light.intensity = 0.9;
-    if (trailLine?.userData?.material) {
-      trailLine.userData.material.color.setHex(trailColors.stalled);
+    if (trailLine?.material) {
+      trailLine.material.emissive.setHex(trailColors.stalled);
     }
   } else if (status === "destroyed") {
     material.color.setHex(statusColors.destroyed);
     material.emissive.setHex(0xffa500);
     light.color.setHex(0xff4500);
     light.intensity = 2.4;
-    if (trailLine?.userData?.material) {
-      trailLine.userData.material.color.setHex(trailColors.destroyed);
+    if (trailLine?.material) {
+      trailLine.material.emissive.setHex(trailColors.destroyed);
     }
   }
 }
@@ -270,7 +293,7 @@ export default function StarCreditManager({ setTotalCredits }) {
     isConnectingRef.current = true;
 
     try {
-      const ws = new WebSocket("ws:
+      const ws = new WebSocket("ws://localhost:8080/ws");
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -364,27 +387,38 @@ export default function StarCreditManager({ setTotalCredits }) {
       if (entry.frameCounter >= 2) {
         entry.frameCounter = 0;
         entry.positionHistory.push(entry.group.position.clone());
-        
+        // Keep trail to max 20 points (~30 units at typical speeds)
         if (entry.positionHistory.length > 20) {
           entry.positionHistory.shift();
         }
       }
 
-      
-      if (entry.trailLine && entry.positionHistory.length > 1) {
-        const geometry = entry.trailLine.geometry;
-        const positions = geometry.attributes.position.array;
-        const pointCount = entry.positionHistory.length;
-
-        
-        for (let i = 0; i < pointCount; i++) {
-          const pos = entry.positionHistory[i];
-          positions[i * 3] = pos.x;
-          positions[i * 3 + 1] = pos.y;
-          positions[i * 3 + 2] = pos.z;
+      // Update trail line geometry
+      if (entry.trailLine && entry.positionHistory.length > 2) {
+        // Dispose old geometry
+        if (entry.trailLine.geometry) {
+          entry.trailLine.geometry.dispose();
         }
-        geometry.attributes.position.needsUpdate = true;
-        geometry.setDrawRange(0, pointCount - 1);
+
+        // Create curve from position history
+        const points = entry.positionHistory.map(p => new THREE.Vector3(p.x, p.y, p.z));
+        const curve = new THREE.CatmullRomCurve3(points);
+
+        // Create new tube geometry
+        const newGeometry = new THREE.TubeGeometry(curve, 12, 2.5, 8, false);
+
+        // Add vertex colors for gradient
+        const colors = [];
+        const colorObj = new THREE.Color(trailColors[entry.status] || trailColors.active);
+        const positionAttribute = newGeometry.getAttribute("position");
+
+        for (let i = 0; i < positionAttribute.count; i++) {
+          const alpha = i / positionAttribute.count;
+          colors.push(colorObj.r * alpha, colorObj.g * alpha, colorObj.b * alpha);
+        }
+
+        newGeometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 3));
+        entry.trailLine.geometry = newGeometry;
       }
 
       if (entry.status === "destroyed") {
