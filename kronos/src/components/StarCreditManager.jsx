@@ -272,6 +272,135 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
   sendCount(packetMap.current.size);
 }
 
+function createMultipleFloatingEyes(scene) {
+  const eyesArray = [];
+  const totalEyes = 50;
+  const orbitingEyes = 5;
+  const staticEyes = totalEyes - orbitingEyes;
+  
+  // Fibonacci sphere for uniform distribution
+  function getFibonacciSpherePoint(i, n) {
+    const phi = Math.acos(1 - (2 * i) / n);
+    const theta = Math.sqrt(n * Math.PI) * phi;
+    return { phi, theta };
+  }
+
+  // Create orbiting eyes (5 of them)
+  for (let i = 0; i < orbitingEyes; i++) {
+    const eye = createSingleEye(scene, true, i);
+    eyesArray.push(eye);
+  }
+
+  // Create static eyes (45 of them) distributed uniformly
+  for (let i = 0; i < staticEyes; i++) {
+    const eye = createSingleEye(scene, false, i);
+    eyesArray.push(eye);
+  }
+
+  return eyesArray;
+}
+
+function createSingleEye(scene, isOrbiting = false, index = 0) {
+  const eyeGroup = new THREE.Group();
+
+  // White of the eye - elongated sphere
+  const eyeWhiteGeometry = new THREE.SphereGeometry(600, 32, 32, 0, Math.PI * 2);
+  const eyeWhiteMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.3,
+    roughness: 0.3,
+    metalness: 0.5,
+  });
+  const eyeWhite = new THREE.Mesh(eyeWhiteGeometry, eyeWhiteMaterial);
+  eyeWhite.scale.set(2, 1.2, 1);
+  eyeGroup.add(eyeWhite);
+
+  // Pupil - black sphere
+  const pupilGeometry = new THREE.SphereGeometry(300, 32, 32);
+  const pupilMaterial = new THREE.MeshStandardMaterial({
+    color: 0x000000,
+    emissive: 0x330000,
+    emissiveIntensity: 0.8,
+    roughness: 0.1,
+    metalness: 0.8,
+  });
+  const pupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+  pupil.position.z = 380;
+  eyeGroup.add(pupil);
+
+  // Red glow spot (iris-like effect)
+  const glowGeometry = new THREE.SphereGeometry(200, 16, 16);
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff0000,
+    transparent: true,
+    opacity: 0.6,
+  });
+  const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+  glow.position.z = 410;
+  eyeGroup.add(glow);
+
+  // Eyelid - semi-transparent black overlay
+  const eyelidGeometry = new THREE.SphereGeometry(620, 32, 32, 0, Math.PI * 2);
+  const eyelidMaterial = new THREE.MeshStandardMaterial({
+    color: 0x000000,
+    transparent: true,
+    opacity: 0,
+    emissive: 0x000000,
+  });
+  const eyelid = new THREE.Mesh(eyelidGeometry, eyelidMaterial);
+  eyelid.scale.set(2, 1.2, 1);
+  eyelid.position.z = 10;
+  eyeGroup.add(eyelid);
+
+  // Point light for spotlight effect
+  const spotlight = new THREE.PointLight(0xff0000, 1.5, 3000);
+  spotlight.position.set(0, 0, 800);
+  eyeGroup.add(spotlight);
+
+  // Calculate position based on Fibonacci sphere distribution
+  if (isOrbiting) {
+    // Orbiting eyes get positioned on a specific orbit
+    const orbitPhase = (index / 5) * Math.PI * 2;
+    eyeGroup.position.set(
+      Math.cos(orbitPhase) * 16000,
+      Math.sin(orbitPhase) * 8000,
+      Math.sin(orbitPhase * 1.5) * 12000
+    );
+  } else {
+    // Static eyes - uniformly distributed on Fibonacci sphere
+    // Golden angle in radians (prevents clustering)
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    
+    // Get position on unit sphere using Fibonacci sphere algorithm
+    const theta = Math.acos(1 - (2 * (index + 5)) / 50); // +5 to skip orbiting eyes
+    const phi = ((index + 5) % 50) * goldenAngle;
+    
+    // Radius at the midpoint between star sphere (5000) and text cube (25000)
+    const radius = 15000;
+    
+    // Convert spherical to Cartesian coordinates
+    const x = Math.cos(phi) * Math.sin(theta) * radius;
+    const y = Math.sin(phi) * Math.sin(theta) * radius;
+    const z = Math.cos(theta) * radius;
+    
+    eyeGroup.position.set(x, y, z);
+  }
+
+  scene.add(eyeGroup);
+
+  return {
+    group: eyeGroup,
+    pupil,
+    eyelid,
+    glow,
+    spotlight,
+    time: 0,
+    isOrbiting,
+    index,
+  };
+}
+
 function createFloatingEye(scene) {
   const eyeGroup = new THREE.Group();
 
@@ -447,7 +576,7 @@ export default function StarCreditManager({ setTotalCredits }) {
   const maxReconnectAttemptsRef = useRef(10);
   const isConnectingRef = useRef(false);
   const starBackgroundRef = useRef(null);
-  const floatingEyeRef = useRef(null);
+  const floatingEyesRef = useRef([]);
 
   const sendCount = (mapValue) => {
     if (typeof setTotalCredits === "function") {
@@ -524,7 +653,7 @@ export default function StarCreditManager({ setTotalCredits }) {
 
   useEffect(() => {
     starBackgroundRef.current = createStarBackground(scene);
-    floatingEyeRef.current = createFloatingEye(scene);
+    floatingEyesRef.current = createMultipleFloatingEyes(scene);
     attemptConnection();
 
     return () => {
@@ -535,18 +664,21 @@ export default function StarCreditManager({ setTotalCredits }) {
         wsRef.current.close();
       }
       
-      // Cleanup floating eye
-      if (floatingEyeRef.current) {
-        const { group } = floatingEyeRef.current;
-        scene.remove(group);
-        group.traverse((child) => {
-          if (child.geometry) child.geometry.dispose();
-          if (child.material) {
-            if (Array.isArray(child.material)) {
-              child.material.forEach((m) => m.dispose());
-            } else {
-              child.material.dispose();
-            }
+      // Cleanup floating eyes
+      if (floatingEyesRef.current && floatingEyesRef.current.length > 0) {
+        floatingEyesRef.current.forEach((eye) => {
+          if (eye.group) {
+            scene.remove(eye.group);
+            eye.group.traverse((child) => {
+              if (child.geometry) child.geometry.dispose();
+              if (child.material) {
+                if (Array.isArray(child.material)) {
+                  child.material.forEach((m) => m.dispose());
+                } else {
+                  child.material.dispose();
+                }
+              }
+            });
           }
         });
       }
@@ -644,38 +776,43 @@ export default function StarCreditManager({ setTotalCredits }) {
       }
     }
 
-    // Animate floating eye
-    if (floatingEyeRef.current) {
-      const eye = floatingEyeRef.current;
-      eye.time += 0.004;
+    // Animate floating eyes
+    if (floatingEyesRef.current && floatingEyesRef.current.length > 0) {
+      floatingEyesRef.current.forEach((eye) => {
+        eye.time += 0.004;
 
-      // Orbital motion - float around in the space between star sphere and text cube
-      const orbitRadius = 15000;
-      eye.group.position.x = Math.sin(eye.time * 0.5) * orbitRadius;
-      eye.group.position.y = Math.cos(eye.time * 0.3) * (orbitRadius * 0.6);
-      eye.group.position.z = Math.sin(eye.time * 0.7) * (orbitRadius * 0.8);
+        if (eye.isOrbiting) {
+          // Orbiting eyes - continuous motion around the sphere
+          const orbitPhase = (eye.index / 5) * Math.PI * 2;
+          const orbitTime = eye.time * 0.3;
+          const orbitRadius = 16000;
+          
+          eye.group.position.x = Math.cos(orbitPhase + orbitTime) * orbitRadius;
+          eye.group.position.y = Math.sin(orbitPhase + orbitTime) * orbitRadius * 0.5;
+          eye.group.position.z = Math.sin(orbitPhase * 1.5 + orbitTime) * orbitRadius * 0.75;
+        }
 
-      // Look around with pupil - smooth sinusoidal motion
-      const pupilOffsetX = Math.sin(eye.time * 0.7) * 150;
-      const pupilOffsetY = Math.cos(eye.time * 0.5) * 100;
-      eye.pupil.position.x = pupilOffsetX;
-      eye.pupil.position.y = pupilOffsetY;
+        // Look around with pupil - smooth sinusoidal motion (all eyes do this)
+        const pupilOffsetX = Math.sin(eye.time * 0.7) * 120;
+        const pupilOffsetY = Math.cos(eye.time * 0.5) * 80;
+        eye.pupil.position.x = pupilOffsetX;
+        eye.pupil.position.y = pupilOffsetY;
 
-      // Glow follows pupil
-      eye.glow.position.x = pupilOffsetX * 0.8;
-      eye.glow.position.y = pupilOffsetY * 0.8;
+        // Glow follows pupil
+        eye.glow.position.x = pupilOffsetX * 0.8;
+        eye.glow.position.y = pupilOffsetY * 0.8;
 
-      // Blink animation - periodic opacity change
-      const blinkCycle = (Math.sin(eye.time * 0.3) + 1) / 2;
-      const blink = Math.pow(Math.sin(eye.time * 2.5 + Math.PI), 4);
-      eye.eyelid.material.opacity = blink * 0.9;
+        // Blink animation - periodic opacity change
+        const blink = Math.pow(Math.sin(eye.time * 2.5 + Math.PI), 4);
+        eye.eyelid.material.opacity = blink * 0.9;
 
-      // Pulse glow intensity
-      eye.spotlight.intensity = 2 + Math.sin(eye.time) * 0.5;
-      eye.glow.material.opacity = 0.5 + Math.sin(eye.time * 1.5) * 0.2;
+        // Pulse glow intensity
+        eye.spotlight.intensity = 1.5 + Math.sin(eye.time + eye.index) * 0.4;
+        eye.glow.material.opacity = 0.4 + Math.sin(eye.time * 1.5 + eye.index) * 0.2;
 
-      // Face the center (origin)
-      eye.group.lookAt(0, 0, 0);
+        // Face the center (origin)
+        eye.group.lookAt(0, 0, 0);
+      });
     }
     
     if (starBackgroundRef.current?.milkyWayMesh) {
