@@ -493,7 +493,7 @@ function createStarBackground(scene) {
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   
-  const text = "YOU ARE NOT SUPPOSED TO BE HERE>>>>RUNNNN";
+  const text = "YOU ARE NOT SUPPOSED TO BE HERE...RUNNNN";
   const textWidth = ctx.measureText(text).width;
   const lineHeight = 150;
   
