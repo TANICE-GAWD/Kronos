@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
+
+import starsTexture from "/textures/textures2/8k_stars.jpg";
+import milkyWayTexture from "/textures/textures2/8k_stars_milky_way.jpg";
+
 const statusColors = {
   active: 0xffd700,
   stalled: 0x9400d3,
@@ -268,6 +272,171 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
   sendCount(packetMap.current.size);
 }
 
+function createFloatingEye(scene) {
+  const eyeGroup = new THREE.Group();
+
+  // White of the eye - elongated sphere
+  const eyeWhiteGeometry = new THREE.SphereGeometry(800, 32, 32, 0, Math.PI * 2);
+  const eyeWhiteMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.3,
+    roughness: 0.3,
+    metalness: 0.5,
+  });
+  const eyeWhite = new THREE.Mesh(eyeWhiteGeometry, eyeWhiteMaterial);
+  eyeWhite.scale.set(2, 1.2, 1);
+  eyeGroup.add(eyeWhite);
+
+  // Pupil - black sphere
+  const pupilGeometry = new THREE.SphereGeometry(400, 32, 32);
+  const pupilMaterial = new THREE.MeshStandardMaterial({
+    color: 0x000000,
+    emissive: 0x330000,
+    emissiveIntensity: 0.8,
+    roughness: 0.1,
+    metalness: 0.8,
+  });
+  const pupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+  pupil.position.z = 450;
+  pupilGeometry.userData = { originalPosition: pupil.position.clone() };
+  eyeGroup.add(pupil);
+
+  // Red glow spot (iris-like effect)
+  const glowGeometry = new THREE.SphereGeometry(250, 16, 16);
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0xff0000,
+    transparent: true,
+    opacity: 0.6,
+  });
+  const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+  glow.position.z = 500;
+  eyeGroup.add(glow);
+
+  // Eyelid - semi-transparent black overlay
+  const eyelidGeometry = new THREE.SphereGeometry(820, 32, 32, 0, Math.PI * 2);
+  const eyelidMaterial = new THREE.MeshStandardMaterial({
+    color: 0x000000,
+    transparent: true,
+    opacity: 0,
+    emissive: 0x000000,
+  });
+  const eyelid = new THREE.Mesh(eyelidGeometry, eyelidMaterial);
+  eyelid.scale.set(2, 1.2, 1);
+  eyelid.position.z = 10;
+  eyeGroup.add(eyelid);
+
+  // Point light for spotlight effect
+  const spotlight = new THREE.PointLight(0xff0000, 2, 5000);
+  spotlight.position.set(0, 0, 1000);
+  eyeGroup.add(spotlight);
+
+  scene.add(eyeGroup);
+
+  return {
+    group: eyeGroup,
+    pupil,
+    eyelid,
+    glow,
+    spotlight,
+    time: 0,
+  };
+}
+
+function createStarBackground(scene) {
+  const textureLoader = new THREE.TextureLoader();
+  
+  
+  const starsGeometry = new THREE.SphereGeometry(5000, 64, 64);
+  const starsTexture_loaded = textureLoader.load(starsTexture);
+  starsTexture_loaded.encoding = THREE.sRGBEncoding;
+  const starsMaterial = new THREE.MeshBasicMaterial({
+    map: starsTexture_loaded,
+    side: THREE.BackSide,
+  });
+  const starsMesh = new THREE.Mesh(starsGeometry, starsMaterial);
+  scene.add(starsMesh);
+
+  
+  const milkyWayGeometry = new THREE.SphereGeometry(4950, 64, 64);
+  const milkyWayTexture_loaded = textureLoader.load(milkyWayTexture);
+  milkyWayTexture_loaded.encoding = THREE.sRGBEncoding;
+  const milkyWayMaterial = new THREE.MeshBasicMaterial({
+    map: milkyWayTexture_loaded,
+    side: THREE.BackSide,
+    transparent: true,
+    opacity: 0.8,
+  });
+  const milkyWayMesh = new THREE.Mesh(milkyWayGeometry, milkyWayMaterial);
+  scene.add(milkyWayMesh);
+
+  
+  const ambientLight = new THREE.AmbientLight(0x4488ff, 0.6);
+  scene.add(ambientLight);
+
+  
+  const warningPlanes = [];
+  const canvas = document.createElement("canvas");
+  canvas.width = 8192;
+  canvas.height = 8192;
+  const ctx = canvas.getContext("2d");
+  
+  
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  
+  ctx.fillStyle = "rgba(255, 0, 0, 0.3)";
+  ctx.font = "bold 120px Arial";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  
+  const text = "YOU ARE NOT SUPPOSED TO BE HERE>>>>RUNNNN";
+  const textWidth = ctx.measureText(text).width;
+  const lineHeight = 150;
+  
+  
+  for (let y = 0; y < canvas.height; y += lineHeight) {
+    for (let x = 0; x < canvas.width; x += textWidth + 50) {
+      ctx.fillText(text, x, y);
+    }
+  }
+  
+  const warningTexture = new THREE.CanvasTexture(canvas);
+  warningTexture.wrapS = THREE.RepeatWrapping;
+  warningTexture.wrapT = THREE.RepeatWrapping;
+  warningTexture.magFilter = THREE.LinearFilter;
+  warningTexture.minFilter = THREE.LinearFilter;
+  
+  
+  const planePositions = [
+    { pos: [0, 0, -25000], rot: [0, 0, 0], scale: [1, 1, 1] },           
+    { pos: [0, 0, 25000], rot: [0, Math.PI, 0], scale: [-1, 1, 1] },     
+    { pos: [-25000, 0, 0], rot: [0, Math.PI / 2, 0], scale: [-1, 1, 1] }, 
+    { pos: [25000, 0, 0], rot: [0, -Math.PI / 2, 0], scale: [1, 1, 1] }, 
+    { pos: [0, 25000, 0], rot: [Math.PI / 2, 0, 0], scale: [1, -1, 1] }, 
+    { pos: [0, -25000, 0], rot: [-Math.PI / 2, 0, 0], scale: [1, 1, 1] } 
+  ];
+  
+  planePositions.forEach(({ pos, rot, scale }) => {
+    const planeGeometry = new THREE.PlaneGeometry(50000, 50000);
+    const planeMaterial = new THREE.MeshBasicMaterial({
+      map: warningTexture.clone(),
+      transparent: true,
+      side: THREE.FrontSide,
+    });
+    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    plane.position.set(...pos);
+    plane.rotation.set(...rot);
+    plane.scale.set(...scale);
+    scene.add(plane);
+    warningPlanes.push(plane);
+  });
+
+  
+  return { starsMesh, milkyWayMesh, starsMaterial, milkyWayMaterial, warningPlanes, warningTexture };
+}
+
 export default function StarCreditManager({ setTotalCredits }) {
   const { scene } = useThree();
   const packetMap = useRef(new Map());
@@ -277,6 +446,8 @@ export default function StarCreditManager({ setTotalCredits }) {
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttemptsRef = useRef(10);
   const isConnectingRef = useRef(false);
+  const starBackgroundRef = useRef(null);
+  const floatingEyeRef = useRef(null);
 
   const sendCount = (mapValue) => {
     if (typeof setTotalCredits === "function") {
@@ -352,6 +523,8 @@ export default function StarCreditManager({ setTotalCredits }) {
   };
 
   useEffect(() => {
+    starBackgroundRef.current = createStarBackground(scene);
+    floatingEyeRef.current = createFloatingEye(scene);
     attemptConnection();
 
     return () => {
@@ -361,6 +534,43 @@ export default function StarCreditManager({ setTotalCredits }) {
       if (wsRef.current) {
         wsRef.current.close();
       }
+      
+      // Cleanup floating eye
+      if (floatingEyeRef.current) {
+        const { group } = floatingEyeRef.current;
+        scene.remove(group);
+        group.traverse((child) => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach((m) => m.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
+      }
+      
+      if (starBackgroundRef.current) {
+        const { starsMesh, milkyWayMesh, starsMaterial, milkyWayMaterial, warningPlanes, warningTexture } = starBackgroundRef.current;
+        scene.remove(starsMesh);
+        scene.remove(milkyWayMesh);
+        if (starsMesh.geometry) starsMesh.geometry.dispose();
+        if (milkyWayMesh.geometry) milkyWayMesh.geometry.dispose();
+        if (starsMaterial) starsMaterial.dispose();
+        if (milkyWayMaterial) milkyWayMaterial.dispose();
+        
+        
+        if (warningPlanes) {
+          warningPlanes.forEach((plane) => {
+            scene.remove(plane);
+            if (plane.geometry) plane.geometry.dispose();
+            if (plane.material) plane.material.dispose();
+          });
+        }
+        if (warningTexture) warningTexture.dispose();
+      }
+      
       packetMap.current.forEach((entry) => {
         scene.remove(entry.group);
         disposeGroup(entry.group);
@@ -387,27 +597,27 @@ export default function StarCreditManager({ setTotalCredits }) {
       if (entry.frameCounter >= 2) {
         entry.frameCounter = 0;
         entry.positionHistory.push(entry.group.position.clone());
-        // Keep trail to max 20 points (~30 units at typical speeds)
+        
         if (entry.positionHistory.length > 20) {
           entry.positionHistory.shift();
         }
       }
 
-      // Update trail line geometry
+      
       if (entry.trailLine && entry.positionHistory.length > 2) {
-        // Dispose old geometry
+        
         if (entry.trailLine.geometry) {
           entry.trailLine.geometry.dispose();
         }
 
-        // Create curve from position history
+        
         const points = entry.positionHistory.map(p => new THREE.Vector3(p.x, p.y, p.z));
         const curve = new THREE.CatmullRomCurve3(points);
 
-        // Create new tube geometry
+        
         const newGeometry = new THREE.TubeGeometry(curve, 12, 2.5, 8, false);
 
-        // Add vertex colors for gradient
+        
         const colors = [];
         const colorObj = new THREE.Color(trailColors[entry.status] || trailColors.active);
         const positionAttribute = newGeometry.getAttribute("position");
@@ -432,6 +642,45 @@ export default function StarCreditManager({ setTotalCredits }) {
       if (entry.status === "active") {
         entry.group.scale.lerp(new THREE.Vector3(1, 1, 1), 0.03);
       }
+    }
+
+    // Animate floating eye
+    if (floatingEyeRef.current) {
+      const eye = floatingEyeRef.current;
+      eye.time += 0.004;
+
+      // Orbital motion - float around in the space between star sphere and text cube
+      const orbitRadius = 15000;
+      eye.group.position.x = Math.sin(eye.time * 0.5) * orbitRadius;
+      eye.group.position.y = Math.cos(eye.time * 0.3) * (orbitRadius * 0.6);
+      eye.group.position.z = Math.sin(eye.time * 0.7) * (orbitRadius * 0.8);
+
+      // Look around with pupil - smooth sinusoidal motion
+      const pupilOffsetX = Math.sin(eye.time * 0.7) * 150;
+      const pupilOffsetY = Math.cos(eye.time * 0.5) * 100;
+      eye.pupil.position.x = pupilOffsetX;
+      eye.pupil.position.y = pupilOffsetY;
+
+      // Glow follows pupil
+      eye.glow.position.x = pupilOffsetX * 0.8;
+      eye.glow.position.y = pupilOffsetY * 0.8;
+
+      // Blink animation - periodic opacity change
+      const blinkCycle = (Math.sin(eye.time * 0.3) + 1) / 2;
+      const blink = Math.pow(Math.sin(eye.time * 2.5 + Math.PI), 4);
+      eye.eyelid.material.opacity = blink * 0.9;
+
+      // Pulse glow intensity
+      eye.spotlight.intensity = 2 + Math.sin(eye.time) * 0.5;
+      eye.glow.material.opacity = 0.5 + Math.sin(eye.time * 1.5) * 0.2;
+
+      // Face the center (origin)
+      eye.group.lookAt(0, 0, 0);
+    }
+    
+    if (starBackgroundRef.current?.milkyWayMesh) {
+      starBackgroundRef.current.milkyWayMesh.rotation.z += 0.00005;
+      starBackgroundRef.current.milkyWayMesh.rotation.y += 0.000025;
     }
   });
 
