@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Reverse engineering OnePlus Nord Buds 3 tap sensors to create a wireless mouse using Bluetooth RFCOMM - a deep dive into Bluetooth debugging and protocol analysis.">
+    <meta name="author" content="Technical Writer">
+    <meta property="og:title" content="Turning My OnePlus Nord Buds 3 Into a Wireless Mouse">
+    <meta property="og:description" content="How I reverse engineered the tap sensors on my earbuds to control my laptop using Wireshark and Linux syscalls.">
+    <title>Turning My OnePlus Nord Buds 3 Into a Wireless Mouse</title>
+    
+    <!-- Highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        /* ========== CSS VARIABLES & TYPOGRAPHY ========== */
+        :root {
+            --color-bg: #0f1419;
+            --color-bg-secondary: #1a202c;
+            --color-text: #e2e8f0;
+            --color-text-muted: #a0aec0;
+            --color-accent: #00d9ff;
+            --color-accent-secondary: #ffd60a;
+            --color-border: #2d3748;
+            --color-code-bg: #1a1f2e;
+            --color-link: #00d9ff;
+            --color-link-hover: #ffd60a;
+            
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
+            --font-mono: "Menlo", "Monaco", "Courier New", monospace;
+            --line-height: 1.7;
+            --transition: all 0.3s ease;
+        }
+        
+        /* ========== GLOBAL STYLES ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            font-family: var(--font-family);
+            line-height: var(--line-height);
+            overflow-x: hidden;
+        }
+        
+        /* ========== LAYOUT GRID ========== */
+        .blog-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+            min-height: 100vh;
+            padding: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .blog-container {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+        }
+        
+        /* ========== HEADER ========== */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--color-bg-secondary);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--color-border);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 8px rgba(0, 217, 255, 0.1);
+        }
+        
+        .header-top {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+        
+        .back-btn:hover {
+            background-color: var(--color-border);
+            color: var(--color-accent);
+        }
+        
+        .search-container {
+            flex: 1;
+            max-width: 400px;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.6rem 1rem 0.6rem 2.5rem;
+            background-color: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            color: var(--color-text);
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--color-accent);
+            background-color: var(--color-bg-secondary);
+            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--color-text-muted);
+            font-size: 1rem;
+        }
+        
+        .search-results-count {
+            position: absolute;
+            right: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            color: var(--color-text-muted);
+        }
+        
+        .header-right {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        /* ========== SIDEBAR ========== */
+        aside {
+            padding: 2rem 1.5rem;
+            background-color: var(--color-bg-secondary);
+            border-radius: 0;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 768px) {
+            aside {
+                display: none;
+                position: fixed;
+                left: 0;
+                top: 70px;
+                width: 100%;
+                height: calc(100vh - 70px);
+                border-radius: 0;
+                padding: 1.5rem;
+                z-index: 99;
+            }
+            
+            aside.mobile-open {
+                display: block;
+            }
+        }
+        
+        .toc-header {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-accent);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        #tableOfContents {
+            list-style: none;
+        }
+        
+        #tableOfContents li {
+            margin-bottom: 0.5rem;
+        }
+        
+        #tableOfContents a {
+            display: block;
+            padding: 0.5rem 0.75rem;
+            color: var(--color-text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            border-left: 2px solid transparent;
+            transition: var(--transition);
+        }
+        
+        #tableOfContents a:hover {
+            color: var(--color-accent);
+            border-left-color: var(--color-accent);
+            background-color: rgba(0, 217, 255, 0.1);
+        }
+        
+        #tableOfContents a.active {
+            color: var(--color-accent);
+            border-left-color: var(--color-accent);
+            background-color: rgba(0, 217, 255, 0.1);
+            font-weight: 600;
+        }
+        
+        /* Sidebar scrollbar */
+        aside::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        aside::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        aside::-webkit-scrollbar-thumb {
+            background-color: var(--color-border);
+            border-radius: 3px;
+        }
+        
+        aside::-webkit-scrollbar-thumb:hover {
+            background-color: var(--color-accent);
+        }
+        
+        /* ========== MAIN CONTENT ========== */
+        main {
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        @media (max-width: 768px) {
+            main {
+                padding: 1.5rem;
+            }
+        }
+        
+        /* ========== ARTICLE HEADER ========== */
+        .article-header {
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--color-accent);
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+        
+        .article-subtitle {
+            font-size: 1.1rem;
+            color: var(--color-text-muted);
+            font-style: italic;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        
+        .article-metadata {
+            display: flex;
+            gap: 2rem;
+            font-size: 0.9rem;
+            color: var(--color-text-muted);
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .metadata-item strong {
+            color: var(--color-accent);
+        }
+        
+        .article-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .tag {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            background-color: rgba(0, 217, 255, 0.1);
+            border: 1px solid var(--color-accent);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--color-accent);
+            font-weight: 600;
+        }
+        
+        /* ========== SHARE BUTTONS ========== */
+        .share-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .share-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid var(--color-border);
+            background-color: transparent;
+            color: var(--color-text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 1rem;
+        }
+        
+        .share-btn:hover {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+            background-color: rgba(0, 217, 255, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        /* ========== CONTENT TYPOGRAPHY ========== */
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 2.5rem;
+            margin-bottom: 1.2rem;
+            color: var(--color-accent);
+            scroll-margin-top: 90px;
+        }
+        
+        h2:first-of-type {
+            margin-top: 0;
+        }
+        
+        p {
+            margin-bottom: 1.2rem;
+            color: var(--color-text);
+        }
+        
+        strong {
+            font-weight: 600;
+            color: var(--color-accent-secondary);
+        }
+        
+        em {
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+        
+        a {
+            color: var(--color-link);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: var(--transition);
+        }
+        
+        a:hover {
+            border-bottom-color: var(--color-link-hover);
+            color: var(--color-link-hover);
+        }
+        
+        hr {
+            border: none;
+            height: 1px;
+            background: var(--color-border);
+            margin: 2rem 0;
+        }
+        
+        /* ========== CODE BLOCKS ========== */
+        pre {
+            background-color: var(--color-code-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        pre code {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--color-text);
+        }
+        
+        code {
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+            background-color: rgba(0, 217, 255, 0.1);
+            color: var(--color-accent);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+        
+        pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+        
+        /* Highlight.js theme customization */
+        .hljs {
+            background-color: var(--color-code-bg) !important;
+        }
+        
+        .hljs-attr, .hljs-attribute {
+            color: #61afef;
+        }
+        
+        .hljs-string {
+            color: #98c379;
+        }
+        
+        .hljs-number {
+            color: #d19a66;
+        }
+        
+        .hljs-literal {
+            color: #56b6c2;
+        }
+        
+        /* ========== TABLES ========== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--color-border);
+        }
+        
+        th {
+            background-color: var(--color-bg-secondary);
+            padding: 1rem;
+            text-align: left;
+            color: var(--color-accent);
+            font-weight: 700;
+            border-bottom: 2px solid var(--color-border);
+        }
+        
+        td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--color-border);
+            color: var(--color-text);
+        }
+        
+        tr:hover {
+            background-color: rgba(0, 217, 255, 0.05);
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* ========== HIGHLIGHTS FOR SEARCH ========== */
+        .search-highlight {
+            background-color: rgba(255, 214, 10, 0.3);
+            border: 1px solid var(--color-accent-secondary);
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+        
+        /* ========== FOOTER ========== */
+        footer {
+            background-color: var(--color-bg-secondary);
+            border-top: 1px solid var(--color-border);
+            padding: 2rem;
+            margin-top: 4rem;
+            text-align: center;
+            color: var(--color-text-muted);
+            font-size: 0.9rem;
+        }
+        
+        .footer-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        footer a {
+            color: var(--color-accent);
+        }
+        
+        /* ========== ANIMATIONS ========== */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        main {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        /* ========== UTILITIES ========== */
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .hamburger {
+                display: flex;
+            }
+        }
+        
+        .hamburger span {
+            width: 100%;
+            height: 2px;
+            background-color: var(--color-accent);
+            border-radius: 1px;
+            transition: var(--transition);
+        }
+        
+        .hamburger.open span:nth-child(1) {
+            transform: rotate(45deg) translate(8px, 8px);
+        }
+        
+        .hamburger.open span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .hamburger.open span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+        }
+        
+        /* Print styles */
+        @media print {
+            header, aside, .hamburger {
+                display: none;
+            }
+            
+            body {
+                background-color: white;
+                color: black;
+            }
+            
+            main {
+                max-width: 100%;
+            }
+            
+            a {
+                color: blue;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header>
+        <div class="header-top">
+            <div class="header-left">
+                <button class="back-btn" onclick="window.history.back()" title="Go back">
+                    ← 
+                </button>
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search article...">
+                    <span class="search-results-count" id="searchCount"></span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="hamburger" id="hamburgerBtn">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <div class="blog-container">
+        <!-- SIDEBAR WITH TOC -->
+        <aside id="toc-sidebar">
+            <div class="toc-header">📑 Contents</div>
+            <ul id="tableOfContents"></ul>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main>
+            <!-- ARTICLE HEADER -->
+            <article>
+                <section class="article-header">
+                    <h1>Poltergeist : </h1>
+                    <h2>Turning My OnePlus Nord Buds 3 Into a Wireless Mouse</h2>
+                    <p class="article-subtitle"><em>How I reverse engineered the tap sensors on my earbuds to control my laptop >>  no app, no SDK, just Wireshark and stubbornness.</em></p>
+                    
+                    <div class="article-metadata">
+                        <div class="metadata-item">
+                            <strong>Reading Time:</strong>
+                            <span id="readingTime">15 min</span>
+                        </div>
+                        <div class="metadata-item">
+                            <strong>Published:</strong>
+                            <span>April 7, 2026</span>
+                        </div>
+                    </div>
+                    
+                    <div class="article-tags">
+                        <span class="tag">Bluetooth</span>
+                        <span class="tag">Reverse Engineering</span>
+                        <span class="tag">Linux</span>
+                        <span class="tag">Go</span>
+                        <span class="tag">Wireshark</span>
+                    </div>
+                    
+                    <div class="share-buttons">
+                        <a href="https://github.com/TANICE-GAWD/Poltergeist" class="share-btn" title="View source on GitHub" target="_blank">⚡ GitHub</a>
+                    </div>
+                </section>
+
+                <!-- ARTICLE CONTENT -->
+                <section class="article-content">
+
+<h2>Part 1 >>  The Broken Phone</h2>
+
+<p>My phone took a fall from the desk. The screen shattered across one corner>> not completely broken, but ugly enough to be annoying. I could've gotten it fixed, but instead I had an idea: I'd refuse to repair it until I finished the Poltergeist ear buds project. Broken phone equals constant motivation. Every time I reached for it, that cracked screen stared back at me>> a physical debt demanding payback.</p>
+
+<p>So I grabbed my Nord Buds 3 and started hacking. Wireshark, syscalls, reverse engineering. Three weeks later, I had a wireless mouse. And yeah, the phone's still broken. Worth it.</p>
+
+<hr>
+
+<h2>Part 2 >>  How Bluetooth Actually Works (The Part I Had to Learn)</h2>
+
+<p>Before I could intercept anything, I needed to understand what I was looking at. Bluetooth is not one protocol >>  it's two completely different stacks sharing the same radio.</p>
+
+<p><strong>Classic Bluetooth (BR/EDR)</strong> is the old one. It handles audio (A2DP), phone calls (HFP), media controls (AVRCP), and serial port emulation (RFCOMM/SPP). This is what your earbuds use to play music.</p>
+
+<p><strong>Bluetooth Low Energy (BLE)</strong> is the newer, power-efficient one. Devices expose a hierarchy of <em>services</em> and <em>characteristics</em> identified by UUIDs. You read, write, or subscribe to notifications on individual characteristics. This is what fitness trackers, smart bulbs, and IoT devices mostly use.</p>
+
+<p>I assumed the Nord Buds used BLE for everything >>  because BLE is modern, BLE is what you'd choose if you were building something in the last decade, and BLE has a clean API for exactly this kind of event-driven notification. That assumption cost me two weeks.</p>
+
+<p><strong>HCI Snoop Logs</strong></p>
+
+<p>Android has a developer option called "Enable Bluetooth HCI snoop log." When turned on, every single Bluetooth packet going in or out of the phone gets written to a file. You pull it with <code>adb</code>, open it in Wireshark, and you can see exactly what any app sends to any device >>  byte by byte. This turned out to be the most important tool I had. The packets don't lie.</p>
+
+<hr>
+
+<h2>Part 3 >>  First Attempt: BLE Notifications</h2>
+
+<p>My first approach was simple. Enumerate all GATT services and characteristics, subscribe to every notifiable characteristic I could find, perform the device handshake, then tap the buds and watch for packets.</p>
+
+<p>I wrote a Go tool using <code>tinygo.org/x/bluetooth</code>. Service discovery gave me six services across two dozen characteristics. I subscribed to all of them:</p>
+
+<pre><code>[SERVICE] 0000fe2c-0000-1000-8000-00805f9b34fb
+  [CHAR] fe2c1234-8366-4814-8eb0-01de32100bea  -&gt; subscribed
+  [CHAR] fe2c1235-8366-4814-8eb0-01de32100bea  -&gt; subscribed
+[SERVICE] 0000079a-d102-11e1-9b23-00025b00a5a5
+  [CHAR] 0200079a-d102-11e1-9b23-00025b00a5a5  -&gt; subscribed
+[INFO] Subscribed to 7 notification sources
+[READY] Perform gestures now...</code></pre>
+
+<p>I tapped every gesture the buds support. Double tap, triple tap, long press on each side.</p>
+
+<p>Nothing. Complete silence across all seven notification channels.</p>
+
+<p>I sent probe packets to try waking up whatever subsystem handled gestures. Tried every category byte from <code>0x01</code> to <code>0x10</code>. No responses. The device was happily processing ANC commands but gesture events simply weren't arriving anywhere over BLE.</p>
+
+<hr>
+
+<h2>Part 4 >>  The Wireshark Revelation</h2>
+
+<p>Something was clearly happening that I wasn't seeing. The HeyMelody app on Android receives tap events in real time >>  I could watch the UI update when I tapped. That data had to be coming from somewhere.</p>
+
+<p>I enabled HCI snoop logging on my Android phone, opened HeyMelody, performed a tap, pulled the log, and opened it in Wireshark.</p>
+
+<p>Filtering for <code>btatt</code> (Bluetooth Attribute Protocol >>  the BLE layer) gave almost nothing useful. Wireshark kept throwing "Frame is out of any connection handle session" errors on the few packets it did show.</p>
+
+<p>Then I tried filtering the raw data directly for the <code>0xAA</code> start-of-frame byte that I knew all OPO packets begin with:</p>
+
+<pre><code>data contains aa:07:00:00 || data contains aa:0c:00:00 || data contains aa:0a:00:00</code></pre>
+
+<p>Fifteen packets matched. I clicked on one and looked at the protocol column.</p>
+
+<p>It said <strong>RFCOMM</strong>.</p>
+
+<p>Not ATT. Not BLE. Classic Bluetooth serial port protocol.</p>
+
+<p>I looked at the destination address. <code>9c:de:f0:33:f5:dd</code> >>  my Nord Buds MAC. The OPO packets >>  the exact same <code>0xAA</code>-prefixed format >>  were travelling over a classic Bluetooth RFCOMM connection, not BLE GATT at all.</p>
+
+<p>That was why my BLE listener was completely silent. The gesture events were never on BLE to begin with. The two stacks coexist on the same device and serve completely separate channels. I had been looking in entirely the wrong place.</p>
+
+<hr>
+
+<h2>Part 5 >>  Finding the Channel</h2>
+
+<p>RFCOMM connections use numbered channels. I needed to know which channel the buds exposed for the OPO control protocol.</p>
+
+<p>The standard way to discover this is SDP >>  the Service Discovery Protocol, which acts like a registry of available services:</p>
+
+<pre><code>sdptool browse 9C:DE:F0:33:F5:DD</code></pre>
+
+<p>The OPO serial service wasn't registered at all. OnePlus intentionally omits it from SDP >>  you can't discover it through normal means.</p>
+
+<p>But I had the Wireshark capture. Digging into the L2CAP layer of those RFCOMM packets revealed the channel number buried in the connection setup. I tried connecting directly:</p>
+
+<pre><code>sudo rfcomm connect /dev/rfcomm0 9C:DE:F0:33:F5:DD 12
+Connected /dev/rfcomm0 to 9C:DE:F0:33:F5:DD on channel 12</code></pre>
+
+<p>Channel 12. Not 1, not 2, not any of the obvious guesses. The only way to find it was from the packet capture.</p>
+
+<hr>
+
+<h2>Part 6 >>  Rewriting for RFCOMM</h2>
+
+<p>The entire BLE stack got deleted. <code>tinygo.org/x/bluetooth</code>, the adapter initialization, the service discovery loop >>  gone. Replaced with about 30 lines of raw Linux syscalls.</p>
+
+<p>Go's standard library has no RFCOMM support. But the Linux kernel does, via <code>AF_BLUETOOTH</code> sockets with <code>BTPROTO_RFCOMM</code>. The connection struct mirrors the C header <code>&lt;bluetooth/rfcomm.h&gt;</code> exactly:</p>
+
+<pre><code>type sockaddrRFCOMM struct {
+    Family  uint16
+    Dev     [6]byte  // MAC address, bytes reversed
+    Channel uint8
+    _       [1]byte  // padding
+}</code></pre>
+
+<p>The MAC address goes in reversed >>  RFCOMM wants LSB first, opposite of how humans write MAC addresses. One <code>connect</code> syscall later, you have a plain bidirectional byte stream to the device. No characteristic handles, no notification subscriptions, no silent failures.</p>
+
+<p>First run after the rewrite:</p>
+
+<pre><code>[OK] RFCOMM connected
+[TX] HELLO: aa070000000123000012
+[TX] REGISTER: aa0c000000854105000000b550a069
+[RX RAW] aa0f000004020408000201030102030304...
+[READY] Perform gestures now...</code></pre>
+
+<p>Then I double-tapped the left bud.</p>
+
+<pre><code>GESTURE: LEFT  DOUBLE TAP</code></pre>
+
+<p>Three weeks of silence, and there it was.</p>
+
+<hr>
+
+<h2>Part 7 >>  Decoding the Gesture Packets</h2>
+
+<p>I ran through every gesture the buds support and captured the raw bytes for all six combinations:</p>
+
+<table>
+<thead>
+<tr><th>Gesture</th><th>Bud byte</th><th>Gesture byte</th></tr>
+</thead>
+<tbody>
+<tr><td>Left double tap</td><td><code>0x01</code></td><td><code>0x02</code></td></tr>
+<tr><td>Right double tap</td><td><code>0x02</code></td><td><code>0x02</code></td></tr>
+<tr><td>Left triple tap</td><td><code>0x01</code></td><td><code>0x03</code></td></tr>
+<tr><td>Right triple tap</td><td><code>0x02</code></td><td><code>0x03</code></td></tr>
+<tr><td>Left long press</td><td><code>0x01</code></td><td><code>0x04</code></td></tr>
+<tr><td>Right long press</td><td><code>0x02</code></td><td><code>0x04</code></td></tr>
+</tbody>
+</table>
+
+<p>The pattern is perfectly consistent. All gesture packets share <code>CAT=0x04</code> <code>SUB=0x02</code> with a <code>0xF1</code> marker at byte 9. After that: bud identity and gesture type, one byte each.</p>
+
+<pre><code>Byte  4  = 0x04   CAT
+Byte  5  = 0x02   SUB (gesture event)
+Byte  9  = 0xF1   gesture marker
+Byte 10  = BUD    0x01=Left  0x02=Right
+Byte 11  = 0x01   constant
+Byte 12  = TYPE   0x02=double  0x03=triple  0x04=long press</code></pre>
+
+<hr>
+
+<h2>Part 8 >>  Mapping Gestures to Actions</h2>
+
+<p>With the byte signatures identified, the last step was turning them into real system input. <code>xdotool</code> on Linux can synthesise mouse clicks, scroll events, and keypresses from the command line.</p>
+
+<table>
+<thead>
+<tr><th>Gesture</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr><td>Left double tap</td><td>Left click</td></tr>
+<tr><td>Right double tap</td><td>Click (link / button under cursor)</td></tr>
+<tr><td>Left triple tap</td><td>Scroll up ×5</td></tr>
+<tr><td>Right triple tap</td><td>Scroll down ×5</td></tr>
+<tr><td>Left long press</td><td>Play / Pause</td></tr>
+<tr><td>Right long press</td><td>Next track</td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<h2>Part 9 >>  Full Implementation</h2>
+
+<p>The complete tool. No external Bluetooth libraries >>  just the Go standard library and Linux syscalls.</p>
+
+<pre><code>package main
+
+import (
+    "encoding/hex"
+    "fmt"
+    "net"
+    "os"
+    "os/exec"
+    "strings"
+    "syscall"
+    "time"
+    "unsafe"
+)
+
+const (
+    DEVICE_MAC     = "9C:DE:F0:33:F5:DD"
+    RFCOMM_CHAN    = 12
+    AF_BLUETOOTH   = 31
+    BTPROTO_RFCOMM = 3
+)
+
+type sockaddrRFCOMM struct {
+    Family  uint16
+    Dev     [6]byte
+    Channel uint8
+    _       [1]byte
+}
+
+func parseMac(mac string) [6]byte {
+    v, _ := net.ParseMAC(mac)
+    var b [6]byte
+    for i := 0; i &lt; 6; i++ { b[i] = v[5-i] }
+    return b
+}
+
+func connectRFCOMM() (int, error) {
+    fd, err := syscall.Socket(AF_BLUETOOTH, syscall.SOCK_STREAM, BTPROTO_RFCOMM)
+    if err != nil { return 0, fmt.Errorf("socket: %w", err) }
+    addr := sockaddrRFCOMM{Family: AF_BLUETOOTH, Dev: parseMac(DEVICE_MAC), Channel: RFCOMM_CHAN}
+    _, _, errno := syscall.Syscall(syscall.SYS_CONNECT, uintptr(fd), uintptr(unsafe.Pointer(&amp;addr)), unsafe.Sizeof(addr))
+    if errno != 0 { syscall.Close(fd); return 0, fmt.Errorf("connect: %w", errno) }
+    return fd, nil
+}
+
+func hexStr(data []byte) string { return hex.EncodeToString(data) }
+
+func sendRaw(fd int, data []byte, label string) {
+    fmt.Printf("[TX] %s: %s\n", label, hexStr(data))
+    syscall.Write(fd, data)
+}
+
+func doHandshake(fd int) {
+    sendRaw(fd, []byte{0xAA,0x07,0x00,0x00,0x00,0x01,0x23,0x00,0x00,0x12}, "HELLO")
+    time.Sleep(2 * time.Second)
+    sendRaw(fd, []byte{0xAA,0x0C,0x00,0x00,0x00,0x85,0x41,0x05,0x00,0x00,0xB5,0x50,0xA0,0x69}, "REGISTER")
+    time.Sleep(2 * time.Second)
+}
+
+func handleNotify(data []byte) {
+    fmt.Println("[RX RAW]", hexStr(data))
+    for i := 0; i &lt; len(data)-12; i++ {
+        if data[i] != 0xAA { continue }
+        frameLen := int(data[i+1])
+        if i+frameLen+2 &gt; len(data) { break }
+        cat, sub := data[i+4], data[i+5]
+        if cat == 0x04 &amp;&amp; sub == 0x02 &amp;&amp; data[i+9] == 0xF1 {
+            side := "LEFT"
+            if data[i+10] == 0x02 { side = "RIGHT" }
+            names := map[byte]string{0x02:"DOUBLE TAP",0x03:"TRIPLE TAP",0x04:"LONG PRESS"}
+            gesture := data[i+12]
+            name, ok := names[gesture]
+            if !ok { name = fmt.Sprintf("UNKNOWN(0x%02X)", gesture) }
+            fmt.Printf("\nGESTURE: %s %s\n", side, name)
+            handleGesture(side, gesture)
+        }
+        if cat == 0x06 &amp;&amp; sub == 0x81 &amp;&amp; i+15 &lt; len(data) {
+            fmt.Printf("\n[BATTERY] L:%d%% R:%d%% C:%d%%\n", data[i+12], data[i+14], data[i+15])
+        }
+        i += frameLen + 3
+    }
+}
+
+func handleGesture(side string, gesture byte) {
+    switch {
+    case side == "LEFT"  &amp;&amp; gesture == 0x02: run("xdotool","click","1")
+    case side == "RIGHT" &amp;&amp; gesture == 0x02: run("xdotool","click","1")
+    case side == "LEFT"  &amp;&amp; gesture == 0x03: run("xdotool","click","--repeat","5","--delay","20","4")
+    case side == "RIGHT" &amp;&amp; gesture == 0x03: run("xdotool","click","--repeat","5","--delay","20","5")
+    case side == "LEFT"  &amp;&amp; gesture == 0x04: run("xdotool","key","XF86AudioPlay")
+    case side == "RIGHT" &amp;&amp; gesture == 0x04: run("xdotool","key","XF86AudioNext")
+    }
+}
+
+func run(name string, args ...string) { exec.Command(name, args...).Run() }
+
+func readLoop(fd int) {
+    buf := make([]byte, 1024)
+    for {
+        n, err := syscall.Read(fd, buf)
+        if err != nil { fmt.Println("[ERROR]", err); return }
+        if n > 0 { handleNotify(buf[:n]) }
+    }
+}
+
+func main() {
+    if len(os.Args) &lt; 2 { fmt.Println("Usage: go run main.go &lt;listen|on|off|trans&gt;"); return }
+    fd, err := connectRFCOMM()
+    if err != nil { fmt.Println("[ERROR]", err); return }
+    defer syscall.Close(fd)
+    go readLoop(fd)
+    time.Sleep(300 * time.Millisecond)
+    switch strings.ToLower(os.Args[1]) {
+    case "listen":
+        doHandshake(fd)
+        fmt.Println("Nord Buds Gesture Remote READY")
+        select {}
+    case "on":    doHandshake(fd); sendRaw(fd, []byte{0xAA,0x0A,0x00,0x00,0x04,0x04,0x42,0x03,0x00,0x01,0x01,0x01}, "ANC ON")
+    case "off":   doHandshake(fd); sendRaw(fd, []byte{0xAA,0x0A,0x00,0x00,0x04,0x04,0x42,0x03,0x00,0x01,0x01,0x04}, "ANC OFF")
+    case "trans": doHandshake(fd); sendRaw(fd, []byte{0xAA,0x0A,0x00,0x00,0x04,0x04,0x42,0x03,0x00,0x01,0x01,0x02}, "TRANSPARENCY")
+    }
+}</code></pre>
+
+<hr>
+
+<h2>Setup</h2>
+
+<pre><code># 1. Install xdotool
+sudo apt install xdotool
+
+# 2. Create project
+mkdir nordbuds &amp;&amp; cd nordbuds
+go mod init nordbuds &amp;&amp; go mod tidy
+
+# 3. Connect the buds
+bluetoothctl connect 9C:DE:F0:33:F5:DD
+
+# 4. Run
+go run main.go listen</code></pre>
+
+<p>No <code>sudo</code> needed once the buds are paired. If you hit a permissions error, add yourself to the bluetooth group and re-login:</p>
+
+<pre><code>sudo usermod -aG bluetooth $USER</code></pre>
+
+<hr>
+
+<h2>What I Learned</h2>
+
+<p><strong>The transport assumption kills you.</strong> I spent the first two weeks certain gestures were on BLE because that's what you'd choose if you were building this today. They weren't. Classic Bluetooth and BLE coexist on the same device, same MAC address, completely separate stacks. Never assume one maps to the other.</p>
+
+<p><strong>The HCI snoop log is the fastest path to truth.</strong> Every hour spent guessing protocol details is an hour that could have been spent reading packets. Enable the log, perform the action, open Wireshark. The traffic shows you exactly what's happening in a way that no amount of guessing can match.</p>
+
+<p><strong>RFCOMM is simpler than BLE once you find the channel.</strong> BLE GATT has services, characteristics, properties, write types that fail silently, notification subscriptions that do nothing. RFCOMM is a socket. Write bytes in, read bytes out. Every failure is loud and obvious.</p>
+
+<p><strong>Channel 12 is not a number you'd guess.</strong> SDP was empty for the OPO service >>  hidden intentionally. The only way to find it was from the snoop log. If you're doing this for a different OnePlus device, start there before anything else.</p>
+
+<p>Now I can advance slides from across the room.<br>OnePlus didn't give me that. I took it.</p>
+                </section>
+            </article>
+        </main>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-content">
+            <p>A technical deep dive into Bluetooth reverse engineering. Built with passion and Wireshark.</p>
+            <p style="margin-top: 1rem; font-size: 0.85rem;">Want to share your own technical adventures? <a href="#">Submit a story</a></p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT -->
+    <script>
+        // ========== TABLE OF CONTENTS GENERATION ==========
+        function generateTableOfContents() {
+            const toc = document.getElementById('tableOfContents');
+            const headings = document.querySelectorAll('h2');
+            
+            headings.forEach((heading, index) => {
+                const id = `section-${index}`;
+                heading.id = id;
+                
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const element = document.getElementById(id);
+                    const offset = element.offsetTop - 100;
+                    window.scrollTo({ top: offset, behavior: 'smooth' });
+                    updateActiveLink();
+                });
+                
+                li.appendChild(a);
+                toc.appendChild(li);
+            });
+        }
+
+        // ========== SCROLL SPY ==========
+        function updateActiveLink() {
+            const headings = document.querySelectorAll('h2');
+            const links = document.querySelectorAll('#tableOfContents a');
+            
+            let current = '';
+            headings.forEach((heading) => {
+                const rect = heading.getBoundingClientRect();
+                if (rect.top <= 150) {
+                    current = heading.id;
+                }
+            });
+            
+            links.forEach(link => {
+                link.classList.remove('active');
+                if (link.href.endsWith(`#${current}`)) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', updateActiveLink);
+
+        // ========== READING TIME CALCULATION ==========
+        function calculateReadingTime() {
+            const content = document.querySelector('.article-content');
+            const text = content.innerText;
+            const words = text.split(/\s+/).length;
+            const time = Math.ceil(words / 200); // Average 200 words per minute
+            document.getElementById('readingTime').textContent = `${time} min`;
+        }
+
+        // ========== SEARCH FUNCTIONALITY ==========
+        const searchInput = document.getElementById('searchInput');
+        const searchCount = document.getElementById('searchCount');
+        let searchTimeout;
+
+        function highlightMatches(text, term) {
+            if (!term) return text;
+            const regex = new RegExp(`(${term})`, 'gi');
+            return text.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        function performSearch(term) {
+            const content = document.querySelector('.article-content');
+            
+            // Clear previous highlights
+            content.innerHTML = content.innerHTML.replace(/<span class="search-highlight">(.*?)<\/span>/g, '$1');
+            
+            if (!term.trim()) {
+                searchCount.textContent = '';
+                return;
+            }
+            
+            let matches = 0;
+            const walker = document.createTreeWalker(
+                content,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            const nodesToReplace = [];
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.textContent.toLowerCase().includes(term.toLowerCase())) {
+                    nodesToReplace.push(node);
+                }
+            }
+            
+            nodesToReplace.forEach(node => {
+                const regex = new RegExp(`(${term})`, 'gi');
+                const count = (node.textContent.match(regex) || []).length;
+                matches += count;
+                
+                const span = document.createElement('span');
+                span.innerHTML = node.textContent.replace(regex, '<span class="search-highlight">$1</span>');
+                node.parentNode.replaceChild(span, node);
+            });
+            
+            searchCount.textContent = matches > 0 ? `${matches} match${matches !== 1 ? 'es' : ''}` : 'No matches';
+        }
+
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                performSearch(e.target.value);
+            }, 200);
+        });
+
+        // ========== SOCIAL SHARING ==========
+        function setupSocialSharing() {
+            // GitHub link is hardcoded in HTML
+        }
+
+        // ========== MOBILE HAMBURGER MENU ==========
+        const hamburger = document.getElementById('hamburgerBtn');
+        const tocSidebar = document.getElementById('toc-sidebar');
+
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('open');
+            tocSidebar.classList.toggle('mobile-open');
+        });
+
+        // Close sidebar when a link is clicked
+        document.querySelectorAll('#tableOfContents a').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('open');
+                tocSidebar.classList.remove('mobile-open');
+            });
+        });
+
+        // ========== CODE HIGHLIGHTING WITH HIGHLIGHT.JS ==========
+        function highlightCodeBlocks() {
+            document.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        }
+
+        // ========== INITIALIZATION ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            generateTableOfContents();
+            calculateReadingTime();
+            highlightCodeBlocks();
+            setupSocialSharing();
+            updateActiveLink();
+        });
+    </script>
+</body>
+</html>
