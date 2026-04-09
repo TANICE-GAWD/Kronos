@@ -541,6 +541,7 @@ function createStarBackground(scene) {
 
 export default function StarCreditManager({ setTotalCredits }) {
   const { scene } = useThree();
+  const [showNeptuneWarning, setShowNeptuneWarning] = useState(false);
   const packetMap = useRef(new Map());
   const targetMap = useRef(new Map());
   const wsRef = useRef(null);
@@ -553,6 +554,7 @@ export default function StarCreditManager({ setTotalCredits }) {
   const audioRef = useRef(null);
   const previousDistanceRef = useRef(0);
   const zoomThresholdRef = useRef(10000);
+  const neptuneThresholdRef = useRef(3000);
 
   const sendCount = (mapValue) => {
     if (typeof setTotalCredits === "function") {
@@ -638,6 +640,18 @@ export default function StarCreditManager({ setTotalCredits }) {
     floatingEyesRef.current = createMultipleFloatingEyes(scene);
     attemptConnection();
 
+    // Create warning overlay container
+    const warningContainer = document.createElement("div");
+    warningContainer.id = "neptune-warning-container";
+    warningContainer.style.position = "fixed";
+    warningContainer.style.top = "0";
+    warningContainer.style.left = "0";
+    warningContainer.style.width = "100%";
+    warningContainer.style.height = "100%";
+    warningContainer.style.pointerEvents = "none";
+    warningContainer.style.zIndex = "1000";
+    document.body.appendChild(warningContainer);
+
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -650,6 +664,12 @@ export default function StarCreditManager({ setTotalCredits }) {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
+      }
+
+      // Remove warning container
+      const container = document.getElementById("neptune-warning-container");
+      if (container) {
+        container.remove();
       }
       
       // Cleanup floating eyes
@@ -706,10 +726,187 @@ export default function StarCreditManager({ setTotalCredits }) {
     };
   }, [scene]);
 
+  const handleNeptuneWarningClose = () => {
+    setShowNeptuneWarning(false);
+  };
+
+  useEffect(() => {
+    // Update warning display
+    const container = document.getElementById("neptune-warning-container");
+    if (!container) return;
+
+    if (showNeptuneWarning) {
+      container.innerHTML = `
+        <div style="
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+          pointer-events: auto;
+        ">
+          <!-- Eye Component -->
+          <div style="
+            width: 200px;
+            height: 200px;
+            background-color: #000;
+            border: 10px solid #333;
+            position: relative;
+            overflow: hidden;
+            padding: 20px;
+            box-sizing: border-box;
+          ">
+            <div style="
+              width: 160px;
+              height: 60px;
+              background-color: #fff;
+              border-radius: 50%;
+              position: absolute;
+              top: 30%;
+              left: 50%;
+              transform: translate(-50%, -60%);
+              animation: pulse 2s infinite;
+              overflow: hidden;
+              z-index: 10;
+            ">
+              <div style="
+                width: 50px;
+                height: 50px;
+                background-color: #000;
+                border-radius: 50%;
+                position: absolute;
+                top: 33%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                animation: look-diagonal-eye 4s infinite ease-in-out;
+              ">
+                <div style="
+                  content: '';
+                  position: absolute;
+                  top: 50%;
+                  left: 50%;
+                  width: 30px;
+                  height: 30px;
+                  background: radial-gradient(circle, rgb(255, 0, 0) 0%, transparent 70%);
+                  border-radius: 50%;
+                  transform: translate(-50%, -50%);
+                  opacity: 0.7;
+                "></div>
+              </div>
+              <div style="
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                background-color: #000;
+                animation: blink-eye 4s infinite;
+              "></div>
+            </div>
+            <div style="
+              position: absolute;
+              top: 30%;
+              left: 50%;
+              width: 47px;
+              height: 200px;
+              background: linear-gradient(to bottom, rgba(255, 0, 0, 0.8), transparent);
+              filter: blur(8px);
+              transform-origin: top;
+              animation: spotlight-sweep-diagonal-eye 4s infinite ease-in-out;
+            "></div>
+          </div>
+
+          <!-- Warning Text -->
+          <div style="
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #ff4444;
+            padding: 40px;
+            border-radius: 10px;
+            border: 3px solid #ff0000;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.8);
+            font-family: monospace;
+            animation: pulse-text 1s infinite;
+          ">
+            <div style="margin-bottom: 20px;">⚠️ WARNING ⚠️</div>
+            <div style="font-size: 20px; line-height: 1.5; margin-bottom: 30px;">
+              DO NOT ZOOM OUT FURTHER!<br>
+              Neptune's boundary detected!<br>
+              Turn back NOW or face<br>
+              the unknown...
+            </div>
+          </div>
+        </div>
+        <style>
+          @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -60%) scale(1); }
+            50% { transform: translate(-50%, -60%) scale(1.05); }
+          }
+          @keyframes look-diagonal-eye {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            25% { transform: translateX(-40%) rotate(-15deg); }
+            75% { transform: translateX(-60%) rotate(15deg); }
+          }
+          @keyframes spotlight-sweep-diagonal-eye {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            25% { transform: translateX(-40%) rotate(-15deg); }
+            75% { transform: translateX(-60%) rotate(15deg); }
+          }
+          @keyframes blink-eye {
+            0%, 90%, 100% { height: 0; }
+            95% { height: 100%; }
+          }
+          @keyframes pulse-text {
+            0%, 100% { text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
+            50% { text-shadow: 0 0 20px rgba(255, 0, 0, 0.9); }
+          }
+          #neptune-ok-button {
+            background-color: #ff0000;
+            color: #fff;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid #ff4444;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+            transition: all 0.2s;
+          }
+          #neptune-ok-button:hover {
+            background-color: #ff6666;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.9);
+          }
+        </style>
+      `;
+      
+      // Create a wrapper div for the button to handle clicks
+      const warningEl = container.querySelector('div');
+      if (warningEl) {
+        const buttonDiv = document.createElement('div');
+        buttonDiv.style.marginTop = '20px';
+        buttonDiv.innerHTML = `<button id="neptune-ok-button">OK</button>`;
+        warningEl.appendChild(buttonDiv);
+        
+        const btn = buttonDiv.querySelector('#neptune-ok-button');
+        if (btn) {
+          btn.onclick = () => {
+            setShowNeptuneWarning(false);
+          };
+        }
+      }
+    } else {
+      container.innerHTML = "";
+    }
+  }, [showNeptuneWarning]);
+
   useFrame(({ camera }) => {
     // Detect entering/exiting star sphere and manage audio
     const currentDistance = camera.position.length();
     const threshold = zoomThresholdRef.current;
+    const neptuneThreshold = neptuneThresholdRef.current;
     const wasInside = previousDistanceRef.current <= threshold;
     const isNowInside = currentDistance <= threshold;
 
@@ -725,6 +922,12 @@ export default function StarCreditManager({ setTotalCredits }) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
+
+    // Neptune warning system
+    const isApproachingNeptune = currentDistance > neptuneThreshold * 0.8 && currentDistance < neptuneThreshold * 1.2;
+    const isPastNeptune = currentDistance >= neptuneThreshold;
+    
+    setShowNeptuneWarning(isApproachingNeptune || isPastNeptune);
 
     previousDistanceRef.current = currentDistance;
 
