@@ -550,6 +550,9 @@ export default function StarCreditManager({ setTotalCredits }) {
   const isConnectingRef = useRef(false);
   const starBackgroundRef = useRef(null);
   const floatingEyesRef = useRef([]);
+  const audioRef = useRef(null);
+  const previousDistanceRef = useRef(0);
+  const zoomThresholdRef = useRef(10000);
 
   const sendCount = (mapValue) => {
     if (typeof setTotalCredits === "function") {
@@ -625,6 +628,12 @@ export default function StarCreditManager({ setTotalCredits }) {
   };
 
   useEffect(() => {
+    // Initialize audio
+    const audio = new Audio("/Demonic_Whispers.mp3");
+    audio.volume = 0.7;
+    audio.loop = true;
+    audioRef.current = audio;
+
     starBackgroundRef.current = createStarBackground(scene);
     floatingEyesRef.current = createMultipleFloatingEyes(scene);
     attemptConnection();
@@ -635,6 +644,12 @@ export default function StarCreditManager({ setTotalCredits }) {
       }
       if (wsRef.current) {
         wsRef.current.close();
+      }
+      
+      // Cleanup audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
       
       // Cleanup floating eyes
@@ -692,6 +707,27 @@ export default function StarCreditManager({ setTotalCredits }) {
   }, [scene]);
 
   useFrame(({ camera }) => {
+    // Detect entering/exiting star sphere and manage audio
+    const currentDistance = camera.position.length();
+    const threshold = zoomThresholdRef.current;
+    const wasInside = previousDistanceRef.current <= threshold;
+    const isNowInside = currentDistance <= threshold;
+
+    // Crossing threshold from inside to outside - start audio
+    if (wasInside && !isNowInside && audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(err => {
+        console.warn("[StarCreditManager] failed to play audio:", err);
+      });
+    }
+    // Crossing threshold from outside to inside - stop audio
+    else if (!wasInside && isNowInside && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    previousDistanceRef.current = currentDistance;
+
     for (const [id, entry] of packetMap.current.entries()) {
       if (!entry.group || !entry.target) continue;
 
