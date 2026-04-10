@@ -47,27 +47,29 @@ func (s *Scheduler) Start(stopChan <-chan struct{}){
 				}
 			}
 			
-			for _, key := range keysToDelete{
-				fmt.Printf("[Scheduler] Removing packet %s with status %s\n", key, s.ActivePackets[key].Status)
-				delete(s.ActivePackets,key)
-			}
+if s.UpdateChan != nil {
+                             stateCopy := make(map[uuid.UUID]packet.Packet)
+                             for k, v := range s.ActivePackets {
+                                     stateCopy[k] = *v
+                             }
+                             if len(stateCopy) > 0 {
+                                     update := packet.StateUpdate{
+                                             Packets:    stateCopy,
+                                             ServerTime: time.Now().UnixNano() / int64(time.Millisecond),
+                                     }
+                                     select{
+                                     case s.UpdateChan <- update:
+                                     default:
+                                     }
+                             }
+                     }
 
-			s.mu.Unlock()
+                     for _, key := range keysToDelete{
+                             fmt.Printf("[Scheduler] Removing packet %s with status %s\n", key, s.ActivePackets[key].Status)
+                             delete(s.ActivePackets,key)
+                     }
 
-			if s.UpdateChan != nil {
-				stateCopy := s.GetState()
-				if len(stateCopy) > 0 {
-					update := packet.StateUpdate{
-						Packets:    stateCopy,
-						ServerTime: time.Now().UnixNano() / int64(time.Millisecond),
-					}
-					// fmt.Printf("[Scheduler] Broadcasting %d packets\n", len(stateCopy))
-					select{
-					case s.UpdateChan <- update:
-					default:
-					}
-				}
-			}
+                     s.mu.Unlock()
 			
 		
 		case <-stopChan:

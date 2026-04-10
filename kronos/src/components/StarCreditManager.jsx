@@ -130,6 +130,14 @@ function updateStatusVisuals(group, status, trailLine) {
     if (trailLine?.material) {
       trailLine.material.emissive.setHex(trailColors.destroyed);
     }
+  } else if (status === "settled") {
+    material.color.setHex(0x0088ff);
+    material.emissive.setHex(0x00ffff);
+    light.color.setHex(0x00ffff);
+    light.intensity = 1.0;
+    if (trailLine?.material) {
+      trailLine.material.emissive.setHex(0x00ffff);
+    }
   }
 }
 
@@ -182,7 +190,7 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
         updateStatusVisuals(entry.group, status, entry.trailLine);
       }
 
-      if (status === "destroyed" && !entry.removalScheduled) {
+      if ((status === "destroyed" || status === "settled") && !entry.removalScheduled) {
         entry.removalScheduled = true;
         setTimeout(() => {
           if (packetMap.current.has(id)) {
@@ -213,7 +221,7 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
         group,
         target,
         status,
-        removalScheduled: status === "destroyed",
+        removalScheduled: (status === "destroyed" || status === "settled"),
         trailLine,
         positionHistory: [target.clone()],
         frameCounter: 0,
@@ -221,7 +229,7 @@ function processPacketData(data, packetMap, targetMap, scene, sendCount) {
 
       targetMap.current.set(id, target);
 
-      if (status === "destroyed") {
+      if (status === "destroyed" || status === "settled") {
         setTimeout(() => {
           if (packetMap.current.has(id)) {
             const toRemove = packetMap.current.get(id);
@@ -997,7 +1005,7 @@ export default function StarCreditManager({ setTotalCredits }) {
         entry.trailLine.geometry = newGeometry;
       }
 
-      if (entry.status === "destroyed") {
+      if (entry.status === "destroyed" || entry.status === "settled") {
         entry.group.scale.lerp(new THREE.Vector3(2, 2, 2), 0.08);
         entry.group.rotation.x += 0.1;
         entry.group.rotation.y += 0.08;
