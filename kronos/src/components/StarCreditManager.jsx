@@ -595,9 +595,17 @@ export default function StarCreditManager({ setTotalCredits }) {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data || "{}");
-          console.log("[StarCreditManager] received data:", data);
-          console.log("[StarCreditManager] data keys:", Object.keys(data));
-          processPacketData(data, packetMap, targetMap, scene, sendCount);
+          // console.log("[StarCreditManager] received data:", data);
+          // console.log("[StarCreditManager] data keys:", Object.keys(data));
+          
+          if (data.server_time) {
+            import("../utils/timeSync").then(({ setServerTime }) => {
+              setServerTime(data.server_time);
+            });
+          }
+          
+          const packets = data.state || data.Packets || data.packets || data; // handle different structures gracefully
+          processPacketData(packets, packetMap, targetMap, scene, sendCount);
         } catch (err) {
           console.warn("[StarCreditManager] failed parse websocket", err);
         }

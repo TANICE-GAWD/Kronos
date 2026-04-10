@@ -10,6 +10,7 @@
 
 import { useFrame, useLoader } from "@react-three/fiber";
 import React, { useRef } from "react";
+import { getSyncedTimeSeconds } from "../utils/timeSync";
 import { TextureLoader } from "three";
 
 const Planet = ({
@@ -28,11 +29,11 @@ const Planet = ({
     const meshRef = useRef();
 
     useFrame((state, delta) => {
-      const now = Date.now() / 1000;
+      const now = getSyncedTimeSeconds();
 
       meshRef.current.rotation.y += delta * 0.8;
 
-      const angle = now * speed;
+      const angle = (now * speed) % (2 * Math.PI);
 
       meshRef.current.position.x =
         distance * Math.cos(angle);
