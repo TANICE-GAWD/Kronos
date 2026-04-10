@@ -33,6 +33,11 @@ type Payload struct {
 	CurrencyID string  `json:"currency_id"`
 }
 
+type StateUpdate struct {
+        ServerTime int64                `json:"server_time"`
+        Packets    map[uuid.UUID]Packet `json:"packets"`
+}
+
 type Packet struct {
 	ID         uuid.UUID `json:"id"`
 	Start      Point     `json:"start"`

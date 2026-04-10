@@ -15,7 +15,7 @@ const Pull_r float64 = 40.0
 const Time_dil = 0.3 
 
 
-const ArrivalThreshold = 40.0
+const ArrivalThreshold = 2.0
 
 
 type Planet struct {
@@ -165,26 +165,36 @@ func interceptTarget(name string, now time.Time, currentPos packet.Point, speed 
 	if leadSeconds < 0 {
 		leadSeconds = 0
 	}
+    
+    // limit prediction to maximum 10 seconds to avoid target orbiting out of bounds 
+    // excessively for slow packets
+    if leadSeconds > 10.0 {
+            leadSeconds = 10.0
+    }
 
-	predictedTarget := currentTarget
-	for i := 0; i < 4; i++ {
-		futureTarget, ok := PredictPlanetPosition(name, now, leadSeconds)
-		if !ok {
-			return packet.Point{}, false
-		}
+    predictedTarget := currentTarget
+    for i := 0; i < 4; i++ {
+            futureTarget, ok := PredictPlanetPosition(name, now, leadSeconds)
+            if !ok {
+                    return packet.Point{}, false
+            }
 
-		predictedTarget = futureTarget
-		nextLead := pointDistance(currentPos, predictedTarget) / speed
-		if math.Abs(nextLead-leadSeconds) < 0.05 {
-			break
-		}
-		leadSeconds = nextLead
-	}
+            predictedTarget = futureTarget
+            nextLead := pointDistance(currentPos, predictedTarget) / speed
+            
+            if nextLead > 10.0 {
+                nextLead = 10.0
+            }
+            
+            // avoid oscillation by applying loose damping if not converged
+            if math.Abs(nextLead-leadSeconds) < 0.05 {
+                    break
+            }
+            leadSeconds = (nextLead + leadSeconds) / 2.0
+    }
 
-	return predictedTarget, true
+    return predictedTarget, true
 }
-
-// use for global websocket loop in engine/scheduler.go
 func RunPhysics(p *packet.Packet, blackHole packet.Point, deltaTime float64) {
 	if p.Status == packet.Destroyed || p.Status == packet.Settled {
 		return
@@ -231,6 +241,7 @@ func CheckArrival(p *packet.Packet, target packet.Point) {
 	dist := p.Distance(p.CurrentPos, target)
 
 	if dist <= ArrivalThreshold {
-		p.Status = packet.Settled
-	}
+                p.CurrentPos = target
+                p.Status = packet.Settled
+        }
 }

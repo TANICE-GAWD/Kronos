@@ -1,7 +1,7 @@
 package transport
 
 import(
-	"github.com/google/uuid"
+	
 	"backend/internal/models/packet"
 
 )
@@ -10,7 +10,7 @@ type Hub struct{
 	register chan *Client
 	unregister chan *Client
 	clients map[*Client]bool
-	broadcast chan map[uuid.UUID]packet.Packet
+	broadcast chan packet.StateUpdate
 }
 
 func NewHub () *Hub{
@@ -18,7 +18,7 @@ func NewHub () *Hub{
 		clients: make(map[*Client]bool),
 		register: make(chan *Client),
 		unregister: make(chan *Client),
-		broadcast: make(chan map[uuid.UUID]packet.Packet),
+		broadcast: make(chan packet.StateUpdate),
 	}
 }
 
@@ -48,6 +48,6 @@ func (h *Hub) Run(){
 }
 
 
-func (h *Hub) Broadcast(state map[uuid.UUID]packet.Packet) {
+func (h *Hub) Broadcast(state packet.StateUpdate) {
 	h.broadcast <- state
 }

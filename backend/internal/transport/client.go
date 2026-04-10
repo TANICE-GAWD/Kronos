@@ -29,13 +29,13 @@ const (
 type Client struct{
 	ID string
 	Conn *websocket.Conn
-	send chan map[uuid.UUID]packet.Packet
+	send chan packet.StateUpdate
 	hub *Hub
 }
 
 
 func NewClient(id string, conn *websocket.Conn, hub *Hub) *Client {
-	return &Client{ID: id, Conn: conn, send: make(chan map[uuid.UUID]packet.Packet, 256), hub: hub}
+	return &Client{ID: id, Conn: conn, send: make(chan packet.StateUpdate, 256), hub: hub}
 }
 
 
@@ -128,7 +128,11 @@ func ServeWS(ctx *gin.Context, roomID string, hub *Hub, initialState map[uuid.UU
 	hub.register <- client
 
 	if initialState != nil && len(initialState) > 0 {
-		err := client.Conn.WriteJSON(initialState)
+		update := packet.StateUpdate{
+			Packets:    initialState,
+			ServerTime: time.Now().UnixNano() / int64(time.Millisecond),
+		}
+		err := client.Conn.WriteJSON(update)
 		if err != nil {
 			log.Println("Error sending initial state:", err)
 		}

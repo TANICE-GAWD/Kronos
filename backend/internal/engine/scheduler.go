@@ -13,7 +13,7 @@ type Scheduler struct{
 	ActivePackets map[uuid.UUID]*packet.Packet
 	mu sync.RWMutex
 	BlackHole packet.Point
-	UpdateChan chan map[uuid.UUID]packet.Packet // not using pointers coz it was causing jittery movement
+	UpdateChan chan packet.StateUpdate // not using pointers coz it was causing jittery movement
 }
 
 
@@ -21,7 +21,7 @@ func NewScheduler(blackHole packet.Point) *Scheduler {
 	return &Scheduler{
 		ActivePackets: make(map[uuid.UUID]*packet.Packet), 
 		BlackHole:     blackHole,
-		UpdateChan:    make(chan map[uuid.UUID]packet.Packet, 16), 
+		UpdateChan:    make(chan packet.StateUpdate, 16), 
 	}
 }
 
@@ -57,9 +57,13 @@ func (s *Scheduler) Start(stopChan <-chan struct{}){
 			if s.UpdateChan != nil {
 				stateCopy := s.GetState()
 				if len(stateCopy) > 0 {
+					update := packet.StateUpdate{
+						Packets:    stateCopy,
+						ServerTime: time.Now().UnixNano() / int64(time.Millisecond),
+					}
 					// fmt.Printf("[Scheduler] Broadcasting %d packets\n", len(stateCopy))
 					select{
-					case s.UpdateChan <- stateCopy:
+					case s.UpdateChan <- update:
 					default:
 					}
 				}
