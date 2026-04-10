@@ -9,7 +9,7 @@ import(
 	"time"
 )
 
-var BlackHole = packet.Point{X: 0, Y: 0, Z: 100}
+var BlackHole = packet.Point{X: 0, Y: 500, Z: 0}
 
 const(
 	SpeedOfLight float64 = 50.0

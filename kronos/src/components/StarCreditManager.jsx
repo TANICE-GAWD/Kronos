@@ -555,6 +555,7 @@ export default function StarCreditManager({ setTotalCredits }) {
   const previousDistanceRef = useRef(0);
   const zoomThresholdRef = useRef(10000);
   const neptuneThresholdRef = useRef(3000);
+  const neptuneWarningDismissedRef = useRef(false);
 
   const sendCount = (mapValue) => {
     if (typeof setTotalCredits === "function") {
@@ -827,7 +828,6 @@ export default function StarCreditManager({ setTotalCredits }) {
             font-size: 24px;
             font-weight: bold;
             text-align: center;
-            box-shadow: 0 0 40px rgba(255, 0, 0, 0.8);
             font-family: monospace;
             animation: pulse-text 1s infinite;
           ">
@@ -860,8 +860,8 @@ export default function StarCreditManager({ setTotalCredits }) {
             95% { height: 100%; }
           }
           @keyframes pulse-text {
-            0%, 100% { text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
-            50% { text-shadow: 0 0 20px rgba(255, 0, 0, 0.9); }
+            0%, 100% { text-shadow: none; }
+            50% { text-shadow: none; }
           }
           #neptune-ok-button {
             background-color: #ff0000;
@@ -872,12 +872,11 @@ export default function StarCreditManager({ setTotalCredits }) {
             border: 2px solid #ff4444;
             border-radius: 5px;
             cursor: pointer;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
             transition: all 0.2s;
           }
           #neptune-ok-button:hover {
             background-color: #ff6666;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.9);
+          }
           }
         </style>
       `;
@@ -889,20 +888,28 @@ export default function StarCreditManager({ setTotalCredits }) {
         buttonDiv.style.marginTop = '20px';
         buttonDiv.innerHTML = `<button id="neptune-ok-button">OK</button>`;
         warningEl.appendChild(buttonDiv);
-        
-        const btn = buttonDiv.querySelector('#neptune-ok-button');
-        if (btn) {
-          btn.onclick = () => {
-            setShowNeptuneWarning(false);
-          };
-        }
       }
+      
+      // Use event delegation on the container for button clicks
+      const clickHandler = (e) => {
+        if (e.target && e.target.id === "neptune-ok-button") {
+          neptuneWarningDismissedRef.current = true;
+          setShowNeptuneWarning(false);
+        }
+      };
+      
+      container.addEventListener("click", clickHandler);
+      
+      // Return cleanup function
+      return () => {
+        container.removeEventListener("click", clickHandler);
+      };
     } else {
       container.innerHTML = "";
     }
   }, [showNeptuneWarning]);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera }, delta) => {
     // Detect entering/exiting star sphere and manage audio
     const currentDistance = camera.position.length();
     const threshold = zoomThresholdRef.current;
@@ -927,14 +934,21 @@ export default function StarCreditManager({ setTotalCredits }) {
     const isApproachingNeptune = currentDistance > neptuneThreshold * 0.8 && currentDistance < neptuneThreshold * 1.2;
     const isPastNeptune = currentDistance >= neptuneThreshold;
     
-    setShowNeptuneWarning(isApproachingNeptune || isPastNeptune);
+    // Only show warning if not dismissed and beyond threshold
+    if ((isApproachingNeptune || isPastNeptune) && !neptuneWarningDismissedRef.current) {
+      setShowNeptuneWarning(true);
+    } else if (currentDistance < neptuneThreshold * 0.8) {
+      // Reset warning dismissal when user comes back inside
+      neptuneWarningDismissedRef.current = false;
+      setShowNeptuneWarning(false);
+    }
 
     previousDistanceRef.current = currentDistance;
 
     for (const [id, entry] of packetMap.current.entries()) {
       if (!entry.group || !entry.target) continue;
 
-      entry.group.position.lerp(entry.target, 0.1);
+      entry.group.position.copy(entry.target);
 
       
       entry.frameCounter++;

@@ -65,7 +65,7 @@ function App(){
 
       <Stars radius={8000} depth={2000} count={6000} factor={4} saturation={0.4} fade speed={0.3} />
 
-      <BlackHole position={[0, 0, 500]} />
+      <BlackHole position={[0, 500, 0]} />
 
       <PlanetFollowCamera 
         followedPlanet={followedPlanet} 

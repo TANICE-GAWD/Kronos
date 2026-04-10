@@ -22,7 +22,7 @@ const themes = {
   },
 };
 
-const BlackHole = ({ position = [35, 0, 0], theme = "inferno" }) => {
+const BlackHole = ({ position = [0, 500, 0], theme = "inferno" }) => {
   const groupRef = useRef();
   const diskRef = useRef();
   const photonRef = useRef();

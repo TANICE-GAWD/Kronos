@@ -15,7 +15,7 @@ const Pull_r float64 = 40.0
 const Time_dil = 0.3 
 
 
-const ArrivalThreshold = 25.0
+const ArrivalThreshold = 40.0
 
 
 type Planet struct {
@@ -58,6 +58,28 @@ func GetPlanetPosition(name string, t time.Time) (packet.Point, bool) {
 		return packet.Point{}, false
 	}
 	return GetPlanetOrbitPosition(p, t), true
+}
+
+func pointDistance(a, b packet.Point) float64 {
+	return math.Sqrt(
+		math.Pow(b.X-a.X, 2) +
+		math.Pow(b.Y-a.Y, 2) +
+		math.Pow(b.Z-a.Z, 2),
+	)
+}
+
+func PredictPlanetPosition(name string, t time.Time, leadSeconds float64) (packet.Point, bool) {
+	p, ok := GetPlanet(name)
+	if !ok {
+		return packet.Point{}, false
+	}
+
+	if leadSeconds <= 0 {
+		return GetPlanetOrbitPosition(p, t), true
+	}
+
+	leadDuration := time.Duration(leadSeconds * float64(time.Second))
+	return GetPlanetOrbitPosition(p, t.Add(leadDuration)), true
 }
 
 func Direction(p packet.Packet, target packet.Point) (packet.Point, float64) {
@@ -115,17 +137,51 @@ func UpdatePos(p *packet.Packet, target packet.Point, deltaTime float64) {
 		return
 	}
 
-	if dist <= 100.0 {
-		p.CurrentPos.X += dir.X * move
-		p.CurrentPos.Y += dir.Y * move
-		p.CurrentPos.Z += dir.Z * move
-		return
+	p.CurrentPos.X += dir.X * move
+	p.CurrentPos.Y += dir.Y * move
+	p.CurrentPos.Z += dir.Z * move
+}
+
+func estimateLeadSeconds(p *packet.Packet, target packet.Point) float64 {
+	speed := p.Velocity * p.DilationFactor
+	if speed <= 0 {
+		return 0
 	}
 
-	// Keep a small curve at long distance, but pursue the current moving target.
-	control := curveControlPoint(p.CurrentPos, target)
-	t := math.Min(move/dist, 1)
-	p.CurrentPos = bezierPoint(p.CurrentPos, control, target, t)
+	return p.Distance(p.CurrentPos, target) / speed
+}
+
+func interceptTarget(name string, now time.Time, currentPos packet.Point, speed float64) (packet.Point, bool) {
+	if speed <= 0 {
+		return packet.Point{}, false
+	}
+
+	currentTarget, ok := GetPlanetPosition(name, now)
+	if !ok {
+		return packet.Point{}, false
+	}
+
+	leadSeconds := pointDistance(currentPos, currentTarget) / speed
+	if leadSeconds < 0 {
+		leadSeconds = 0
+	}
+
+	predictedTarget := currentTarget
+	for i := 0; i < 4; i++ {
+		futureTarget, ok := PredictPlanetPosition(name, now, leadSeconds)
+		if !ok {
+			return packet.Point{}, false
+		}
+
+		predictedTarget = futureTarget
+		nextLead := pointDistance(currentPos, predictedTarget) / speed
+		if math.Abs(nextLead-leadSeconds) < 0.05 {
+			break
+		}
+		leadSeconds = nextLead
+	}
+
+	return predictedTarget, true
 }
 
 // use for global websocket loop in engine/scheduler.go
@@ -134,15 +190,21 @@ func RunPhysics(p *packet.Packet, blackHole packet.Point, deltaTime float64) {
 		return
 	}
 
-	target, ok := GetPlanetPosition(p.DestinationPlanet, time.Now())
+	now := time.Now()
+	liveTarget, ok := GetPlanetPosition(p.DestinationPlanet, now)
 	if !ok {
 		return
+	}
+
+	target := liveTarget
+	if predictedTarget, ok := interceptTarget(p.DestinationPlanet, now, p.CurrentPos, p.Velocity*p.DilationFactor); ok {
+		target = predictedTarget
 	}
 
 	UpdatePos(p, target, deltaTime)
 
 	ApplyGravity(p, blackHole)
-	CheckArrival(p, target)
+	CheckArrival(p, liveTarget)
 }
 
 func ApplyGravity(p *packet.Packet, blackHolePos packet.Point) {
