@@ -22,7 +22,7 @@ const themes = {
   },
 };
 
-const BlackHole = ({ position = [0, 500, 0], theme = "inferno" }) => {
+const BlackHole = ({ position = [0, 500, 0], scale = [100, 100, 100], theme = "inferno", onPositionUpdate }) => {
   const groupRef = useRef();
   const diskRef = useRef();
   const photonRef = useRef();
@@ -118,6 +118,12 @@ const BlackHole = ({ position = [0, 500, 0], theme = "inferno" }) => {
 
   useFrame(({ clock }) => {
     const elapsed = clock.getElapsedTime();
+    if(groupRef.current){
+      groupRef.current.rotation.x = 0.2;
+    }
+    if (onPositionUpdate) {
+      onPositionUpdate("BlackHole", { x: position[0], y: position[1], z: position[2] }, 500);
+    }
 
     const diskMat = diskMaterialRef.current;
     const photonMat = photonMaterialRef.current;
@@ -147,7 +153,7 @@ const BlackHole = ({ position = [0, 500, 0], theme = "inferno" }) => {
 
     const group = groupRef.current;
     if (group) {
-      group.rotation.y = elapsed * 0.3;
+      group.rotation.x = 0.2; // Slight tilt
     }
 
     if (echoState.current.active) {
@@ -403,7 +409,7 @@ const BlackHole = ({ position = [0, 500, 0], theme = "inferno" }) => {
   `;
 
   return (
-    <group ref={groupRef} position={position}>
+    <group ref={groupRef} position={position} scale={scale}>
       <mesh ref={blackHoleRef} onClick={triggerDiskEcho}>
         <sphereGeometry args={[BLACK_HOLE_EVENT_HORIZON_RADIUS, 64, 32]} />
         <meshBasicMaterial color={0x000000} />

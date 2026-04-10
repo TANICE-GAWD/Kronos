@@ -25,20 +25,39 @@ function createTrailLine(status = "active") {
     new THREE.Vector3(0, 0, 1)
   );
 
-  const geometry = new THREE.TubeGeometry(curve, 8, 2, 8, false);
+  const tubularSegments = 8;
+  const radialSegments = 8;
+  const geometry = new THREE.TubeGeometry(curve, tubularSegments, 2, radialSegments, false);
 
-  
   const colors = [];
-  const colorObj = new THREE.Color(trailColors[status] || trailColors.active);
   const positionAttribute = geometry.getAttribute("position");
+  const vertex = new THREE.Vector3();
+  const center = new THREE.Vector3();
 
-  for (let i = 0; i < positionAttribute.count; i++) {
-    const alpha = i / positionAttribute.count;
-    
-    colors.push(colorObj.r * alpha, colorObj.g * alpha, colorObj.b * alpha);
+  for (let s = 0; s <= tubularSegments; s++) {
+    const t = s / tubularSegments;
+    const scale = Math.pow(t, 2.0); // smooth taper
+    curve.getPoint(t, center);
+
+    for (let r = 0; r <= radialSegments; r++) {
+      const index = s * (radialSegments + 1) + r;
+      vertex.fromBufferAttribute(positionAttribute, index);
+      vertex.sub(center).multiplyScalar(scale).add(center);
+      positionAttribute.setXYZ(index, vertex.x, vertex.y, vertex.z);
+    }
   }
 
-  geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 3));
+  const colorObj = new THREE.Color(trailColors[status] || trailColors.active);
+  for (let s = 0; s <= tubularSegments; s++) {
+    const t = s / tubularSegments;
+    const brightness = Math.pow(t, 1.5);
+    const alphaFade = Math.pow(t, 2.0); // Completely transparent at tail end
+    for (let r = 0; r <= radialSegments; r++) {
+      colors.push(colorObj.r * brightness, colorObj.g * brightness, colorObj.b * brightness, alphaFade);
+    }
+  }
+
+  geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 4));
 
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -925,7 +944,7 @@ export default function StarCreditManager({ setTotalCredits }) {
     }
   }, [showNeptuneWarning]);
 
-  useFrame(({ camera }, delta) => {
+  useFrame(({ camera, clock }, delta) => {
     
     const currentDistance = camera.position.length();
     const threshold = zoomThresholdRef.current;
@@ -964,17 +983,20 @@ export default function StarCreditManager({ setTotalCredits }) {
     for (const [id, entry] of packetMap.current.entries()) {
       if (!entry.group || !entry.target) continue;
 
-      entry.group.position.copy(entry.target);
-
+      // Smooth position interpolation and facing direction
+      const currentPos = entry.group.position.clone();
+      entry.group.position.lerp(entry.target, Math.min(1.0, 0.2 * 60 * delta));
       
-      entry.frameCounter++;
-      if (entry.frameCounter >= 2) {
-        entry.frameCounter = 0;
-        entry.positionHistory.push(entry.group.position.clone());
-        
-        if (entry.positionHistory.length > 20) {
-          entry.positionHistory.shift();
-        }
+      if (currentPos.distanceTo(entry.target) > 0.01) {
+        // Look towards target and add a cool rolling spin animation
+        entry.group.lookAt(entry.target);
+        entry.group.rotateZ(clock.elapsedTime * 5.0);
+      }
+
+      // Record hi-res trail every frame
+      entry.positionHistory.push(entry.group.position.clone());
+      if (entry.positionHistory.length > 35) {
+        entry.positionHistory.shift();
       }
 
       
@@ -985,23 +1007,35 @@ export default function StarCreditManager({ setTotalCredits }) {
         }
 
         
-        const points = entry.positionHistory.map(p => new THREE.Vector3(p.x, p.y, p.z));
+        let points = entry.positionHistory.map(p => new THREE.Vector3(p.x, p.y, p.z));
+        // Deduplicate adjacent points to prevent Curve math failures (NaN tangents causing WebGL crash)
+        points = points.filter((p, idx) => {
+          if (idx === 0) return true;
+          return p.distanceTo(points[idx - 1]) > 0.01;
+        });
+
+        if (points.length < 2) continue; // skip tube creation if not enough data yet
+
         const curve = new THREE.CatmullRomCurve3(points);
 
         
-        const newGeometry = new THREE.TubeGeometry(curve, 12, 2.5, 8, false);
+        const tubularSegments = 16;
+        const radialSegments = 4;
+        const newGeometry = new THREE.TubeGeometry(curve, tubularSegments, 1.8, radialSegments, false);
 
-        
         const colors = [];
         const colorObj = new THREE.Color(trailColors[entry.status] || trailColors.active);
-        const positionAttribute = newGeometry.getAttribute("position");
-
-        for (let i = 0; i < positionAttribute.count; i++) {
-          const alpha = i / positionAttribute.count;
-          colors.push(colorObj.r * alpha, colorObj.g * alpha, colorObj.b * alpha);
+        for (let s = 0; s <= tubularSegments; s++) {
+          const t = s / tubularSegments;
+          // Simplified comet tail: just aggressively fade opacity, skip expensive geometry remeshing
+          const brightness = Math.max(0.2, Math.pow(t, 1.2)); 
+          const alphaFade = Math.pow(t, 3.0); 
+          for (let r = 0; r <= radialSegments; r++) {
+            colors.push(colorObj.r * brightness, colorObj.g * brightness, colorObj.b * brightness, alphaFade);
+          }
         }
 
-        newGeometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 3));
+        newGeometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(colors), 4));
         entry.trailLine.geometry = newGeometry;
       }
 

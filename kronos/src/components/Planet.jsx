@@ -43,7 +43,7 @@ const Planet = ({
 
       // Report position updates for camera following
       if (onPositionUpdate) {
-        onPositionUpdate(name, meshRef.current.position);
+        onPositionUpdate(name, meshRef.current.position, radius);
       }
     });
 

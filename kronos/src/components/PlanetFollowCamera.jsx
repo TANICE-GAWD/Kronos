@@ -20,9 +20,10 @@ const PlanetFollowCamera = ({ followedPlanet, planetPositionsRef }) => {
     const planetPos = planetPositionsRef.current[planet];
 
     // Calculate new camera position based on planet position
+    const r = planetPos.radius || 10;
     const offsetX = 0;
-    const offsetY = 150;
-    const offsetZ = 200;
+    const offsetY = r < 100 ? 150 : r * 1.5;
+    const offsetZ = r < 100 ? 200 : r * 2.5;
 
     const cameraX = planetPos.x + offsetX;
     const cameraY = planetPos.y + offsetY;

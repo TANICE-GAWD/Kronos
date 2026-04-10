@@ -18,6 +18,7 @@ function App(){
   
 
   const planets = [
+    { name: "BlackHole", radius: 100, distance: 4000, speed: 0 },
     { name: "Mercury", radius: 2.5, distance: 39, speed: 0.82 },
     { name: "Venus", radius: 4.5, distance: 72, speed: 0.32 },
     { name: "Earth", radius: 5, distance: 100, speed: 0.20 },
@@ -34,11 +35,12 @@ function App(){
     camera.updateProjectionMatrix();
   };
 
-  const handlePlanetPositionUpdate = (planetName, position) => {
+  const handlePlanetPositionUpdate = (planetName, position, radius = 50) => {
     planetPositionsRef.current[planetName] = {
       x: position.x,
       y: position.y,
       z: position.z,
+      radius: radius,
     };
   };
 
@@ -51,11 +53,11 @@ function App(){
 
       <Sun/>
 
-      {planets.map((planet) => (
+        {planets.filter(p => p.name !== "BlackHole").map((planet) => (
         <OrbitLine key={`orbit-${planet.name}`} distance={planet.distance} />
       ))}
 
-      {planets.map((planet) => (
+      {planets.filter(p => p.name !== "BlackHole").map((planet) => (
         <Planet 
           key={planet.name} 
           {...planet} 
@@ -63,9 +65,9 @@ function App(){
         />
       ))}
 
-      <Stars radius={8000} depth={2000} count={6000} factor={4} saturation={0.4} fade speed={0.3} />
+      <Stars radius={8000} depth={6000} count={6000} factor={4} saturation={0.4} fade speed={0.3} />
 
-      <BlackHole position={[0, 500, 0]} />
+      <BlackHole position={[4000, 0, 0]} onPositionUpdate={(name, pos) => handlePlanetPositionUpdate(name, pos, 550)} />
 
       <PlanetFollowCamera 
         followedPlanet={followedPlanet} 
