@@ -276,7 +276,7 @@ function createMultipleFloatingEyes(scene) {
   const eyesArray = [];
   const totalEyes = 50;
 
-  // Create static eyes (50 of them) distributed uniformly
+  
   for (let i = 0; i < totalEyes; i++) {
     const eye = createSingleEye(scene, i);
     eyesArray.push(eye);
@@ -288,7 +288,7 @@ function createMultipleFloatingEyes(scene) {
 function createSingleEye(scene, index = 0) {
   const eyeGroup = new THREE.Group();
 
-  // White of the eye - elongated sphere
+  
   const eyeWhiteGeometry = new THREE.SphereGeometry(600, 32, 32, 0, Math.PI * 2);
   const eyeWhiteMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -301,7 +301,7 @@ function createSingleEye(scene, index = 0) {
   eyeWhite.scale.set(2, 1.2, 1);
   eyeGroup.add(eyeWhite);
 
-  // Pupil - black sphere
+  
   const pupilGeometry = new THREE.SphereGeometry(300, 32, 32);
   const pupilMaterial = new THREE.MeshStandardMaterial({
     color: 0x000000,
@@ -314,7 +314,7 @@ function createSingleEye(scene, index = 0) {
   pupil.position.z = 380;
   eyeGroup.add(pupil);
 
-  // Red glow spot (iris-like effect)
+  
   const glowGeometry = new THREE.SphereGeometry(200, 16, 16);
   const glowMaterial = new THREE.MeshBasicMaterial({
     color: 0xff0000,
@@ -325,7 +325,7 @@ function createSingleEye(scene, index = 0) {
   glow.position.z = 410;
   eyeGroup.add(glow);
 
-  // Eyelid - semi-transparent black overlay
+  
   const eyelidGeometry = new THREE.SphereGeometry(620, 32, 32, 0, Math.PI * 2);
   const eyelidMaterial = new THREE.MeshStandardMaterial({
     color: 0x000000,
@@ -338,23 +338,23 @@ function createSingleEye(scene, index = 0) {
   eyelid.position.z = 10;
   eyeGroup.add(eyelid);
 
-  // Point light for spotlight effect
+  
   const spotlight = new THREE.PointLight(0xff0000, 1.5, 3000);
   spotlight.position.set(0, 0, 800);
   eyeGroup.add(spotlight);
 
-  // Static eyes - uniformly distributed on Fibonacci sphere
-  // Golden angle in radians (prevents clustering)
+  
+  
   const goldenAngle = Math.PI * (3 - Math.sqrt(5));
   
-  // Get position on unit sphere using Fibonacci sphere algorithm
+  
   const theta = Math.acos(1 - (2 * index) / 50);
   const phi = (index % 50) * goldenAngle;
   
-  // Radius at the midpoint between star sphere (5000) and text cube (25000)
+  
   const radius = 15000;
   
-  // Convert spherical to Cartesian coordinates
+  
   const x = Math.cos(phi) * Math.sin(theta) * radius;
   const y = Math.sin(phi) * Math.sin(theta) * radius;
   const z = Math.cos(theta) * radius;
@@ -377,7 +377,7 @@ function createSingleEye(scene, index = 0) {
 function createFloatingEye(scene) {
   const eyeGroup = new THREE.Group();
 
-  // White of the eye - elongated sphere
+  
   const eyeWhiteGeometry = new THREE.SphereGeometry(800, 32, 32, 0, Math.PI * 2);
   const eyeWhiteMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -390,7 +390,7 @@ function createFloatingEye(scene) {
   eyeWhite.scale.set(2, 1.2, 1);
   eyeGroup.add(eyeWhite);
 
-  // Pupil - black sphere
+  
   const pupilGeometry = new THREE.SphereGeometry(400, 32, 32);
   const pupilMaterial = new THREE.MeshStandardMaterial({
     color: 0x000000,
@@ -404,7 +404,7 @@ function createFloatingEye(scene) {
   pupilGeometry.userData = { originalPosition: pupil.position.clone() };
   eyeGroup.add(pupil);
 
-  // Red glow spot (iris-like effect)
+  
   const glowGeometry = new THREE.SphereGeometry(250, 16, 16);
   const glowMaterial = new THREE.MeshBasicMaterial({
     color: 0xff0000,
@@ -415,7 +415,7 @@ function createFloatingEye(scene) {
   glow.position.z = 500;
   eyeGroup.add(glow);
 
-  // Eyelid - semi-transparent black overlay
+  
   const eyelidGeometry = new THREE.SphereGeometry(820, 32, 32, 0, Math.PI * 2);
   const eyelidMaterial = new THREE.MeshStandardMaterial({
     color: 0x000000,
@@ -428,7 +428,7 @@ function createFloatingEye(scene) {
   eyelid.position.z = 10;
   eyeGroup.add(eyelid);
 
-  // Point light for spotlight effect
+  
   const spotlight = new THREE.PointLight(0xff0000, 2, 5000);
   spotlight.position.set(0, 0, 1000);
   eyeGroup.add(spotlight);
@@ -631,7 +631,7 @@ export default function StarCreditManager({ setTotalCredits }) {
   };
 
   useEffect(() => {
-    // Initialize audio
+    
     const audio = new Audio("/Demonic_Whispers.mp3");
     audio.volume = 0.7;
     audio.loop = true;
@@ -641,7 +641,7 @@ export default function StarCreditManager({ setTotalCredits }) {
     floatingEyesRef.current = createMultipleFloatingEyes(scene);
     attemptConnection();
 
-    // Create warning overlay container
+    
     const warningContainer = document.createElement("div");
     warningContainer.id = "neptune-warning-container";
     warningContainer.style.position = "fixed";
@@ -661,19 +661,19 @@ export default function StarCreditManager({ setTotalCredits }) {
         wsRef.current.close();
       }
       
-      // Cleanup audio
+      
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
 
-      // Remove warning container
+      
       const container = document.getElementById("neptune-warning-container");
       if (container) {
         container.remove();
       }
       
-      // Cleanup floating eyes
+      
       if (floatingEyesRef.current && floatingEyesRef.current.length > 0) {
         floatingEyesRef.current.forEach((eye) => {
           if (eye.group) {
@@ -732,7 +732,7 @@ export default function StarCreditManager({ setTotalCredits }) {
   };
 
   useEffect(() => {
-    // Update warning display
+    
     const container = document.getElementById("neptune-warning-container");
     if (!container) return;
 
@@ -881,7 +881,7 @@ export default function StarCreditManager({ setTotalCredits }) {
         </style>
       `;
       
-      // Create a wrapper div for the button to handle clicks
+      
       const warningEl = container.querySelector('div');
       if (warningEl) {
         const buttonDiv = document.createElement('div');
@@ -890,7 +890,7 @@ export default function StarCreditManager({ setTotalCredits }) {
         warningEl.appendChild(buttonDiv);
       }
       
-      // Use event delegation on the container for button clicks
+      
       const clickHandler = (e) => {
         if (e.target && e.target.id === "neptune-ok-button") {
           neptuneWarningDismissedRef.current = true;
@@ -900,7 +900,7 @@ export default function StarCreditManager({ setTotalCredits }) {
       
       container.addEventListener("click", clickHandler);
       
-      // Return cleanup function
+      
       return () => {
         container.removeEventListener("click", clickHandler);
       };
@@ -910,35 +910,35 @@ export default function StarCreditManager({ setTotalCredits }) {
   }, [showNeptuneWarning]);
 
   useFrame(({ camera }, delta) => {
-    // Detect entering/exiting star sphere and manage audio
+    
     const currentDistance = camera.position.length();
     const threshold = zoomThresholdRef.current;
     const neptuneThreshold = neptuneThresholdRef.current;
     const wasInside = previousDistanceRef.current <= threshold;
     const isNowInside = currentDistance <= threshold;
 
-    // Crossing threshold from inside to outside - start audio
+    
     if (wasInside && !isNowInside && audioRef.current) {
       audioRef.current.currentTime = 0;
       audioRef.current.play().catch(err => {
         console.warn("[StarCreditManager] failed to play audio:", err);
       });
     }
-    // Crossing threshold from outside to inside - stop audio
+    
     else if (!wasInside && isNowInside && audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
 
-    // Neptune warning system
+    
     const isApproachingNeptune = currentDistance > neptuneThreshold * 0.8 && currentDistance < neptuneThreshold * 1.2;
     const isPastNeptune = currentDistance >= neptuneThreshold;
     
-    // Only show warning if not dismissed and beyond threshold
+    
     if ((isApproachingNeptune || isPastNeptune) && !neptuneWarningDismissedRef.current) {
       setShowNeptuneWarning(true);
     } else if (currentDistance < neptuneThreshold * 0.8) {
-      // Reset warning dismissal when user comes back inside
+      
       neptuneWarningDismissedRef.current = false;
       setShowNeptuneWarning(false);
     }
@@ -1002,13 +1002,13 @@ export default function StarCreditManager({ setTotalCredits }) {
       }
     }
 
-    // Animate floating eyes
+    
     if (floatingEyesRef.current && floatingEyesRef.current.length > 0) {
       floatingEyesRef.current.forEach((eye) => {
         eye.time += 0.004;
 
         if (eye.isOrbiting) {
-          // Orbiting eyes - continuous motion around the sphere
+          
           const orbitPhase = (eye.index / 5) * Math.PI * 2;
           const orbitTime = eye.time * 0.3;
           const orbitRadius = 16000;
@@ -1018,25 +1018,25 @@ export default function StarCreditManager({ setTotalCredits }) {
           eye.group.position.z = Math.sin(orbitPhase * 1.5 + orbitTime) * orbitRadius * 0.75;
         }
 
-        // Look around with pupil - smooth sinusoidal motion (all eyes do this)
+        
         const pupilOffsetX = Math.sin(eye.time * 0.7) * 120;
         const pupilOffsetY = Math.cos(eye.time * 0.5) * 80;
         eye.pupil.position.x = pupilOffsetX;
         eye.pupil.position.y = pupilOffsetY;
 
-        // Glow follows pupil
+        
         eye.glow.position.x = pupilOffsetX * 0.8;
         eye.glow.position.y = pupilOffsetY * 0.8;
 
-        // Blink animation - periodic opacity change
+        
         const blink = Math.pow(Math.sin(eye.time * 2.5 + Math.PI), 4);
         eye.eyelid.material.opacity = blink * 0.9;
 
-        // Pulse glow intensity
+        
         eye.spotlight.intensity = 1.5 + Math.sin(eye.time + eye.index) * 0.4;
         eye.glow.material.opacity = 0.4 + Math.sin(eye.time * 1.5 + eye.index) * 0.2;
 
-        // All eyes follow the camera
+        
         eye.group.lookAt(camera.position);
       });
     }
