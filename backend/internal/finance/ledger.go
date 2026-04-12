@@ -1,9 +1,12 @@
 package finance
 
 import(
-	"fmt"
-	"uuid"
-	"backend/internal/models/packet"
+
+	"errors"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 // need a triple state ledger >> Available, In-Flight, Settled
@@ -17,26 +20,26 @@ const(
 )
 
 type Account struct{
-	UserID uuid `json: "id"`
-	Balances map[string]float64 //currency_ID : amount
-	LockedFunds map[uuid.UUID]float64
+	UserID string `json:"id"` // string coz it will be planet names
+	Balances map[string]float64 `json:"balances"` //currency_ID : amount
+	LockedFunds map[uuid.UUID]float64 `json:"lockedfunds"`
 }
 
 
 type LedgerEntry struct{
-	ID uuid 
-	Amount float64
-	Currency string
-	SenderID string
-	ReceiverID string
-	Timestamp time.Time
-	Status TxStatus
+	ID uuid.UUID `json:"id"`
+	Amount float64 `json:"amount"`
+	Currency string `json:"currency"`
+	SenderID string `json:"senderid"`
+	ReceiverID string `json:"receiverid"`
+	Timestamp time.Time `json:"timestamp"`
+	Status TxStatus `json:"status"`
 }
 
 
 type Ledger struct{
-	Accounts map[string]*Account
-	Entries map[string]*LedgerEntry
+	Accounts map[string]*Account `json:"accounts"`
+	Entries map[uuid.UUID]*LedgerEntry `json:"entries"`
 	mu sync.RWMutex
 }
 
@@ -52,7 +55,7 @@ func NewLedger() *Ledger {
 func (l *Ledger) getorCreateAcc(userID string) *Account{ // why my naming sense so bad bro T_T
 	acc,exists := l.Accounts[userID]
 	if !exists{
-		acc := &Account{
+		acc = &Account{
 			UserID : userID,
 			Balances :make(map[string]float64),
 			LockedFunds : make(map[uuid.UUID]float64),
@@ -65,7 +68,7 @@ func (l *Ledger) getorCreateAcc(userID string) *Account{ // why my naming sense 
 
 
 
-func (l *Ledger) LockedFunds(
+func (l *Ledger) LockFunds(
 	txID uuid.UUID,
 	userID string,
 	receiverID string,
@@ -73,14 +76,14 @@ func (l *Ledger) LockedFunds(
 	amount float64,
 ) error {
 	l.mu.Lock()
-	defer l.mu.UnLock
-	acc := getorCreateAcc(userID)
+	defer l.mu.Unlock()
+	acc := l.getorCreateAcc(userID)
 	available := acc.Balances[currency]
 	if(available<amount){
-		return errors.New("Get your money up")
+		return errors.New("Get your money up...insufficient balance")
 	}
 	acc.Balances[currency] -= amount
-	acc.LockedFunds[txID] += amount
+	acc.LockedFunds[txID] = amount
 
 	l.Entries[txID] = &LedgerEntry{
 		ID: txID,
@@ -98,9 +101,9 @@ func (l *Ledger) LockedFunds(
 
 func (l *Ledger) Settle(txID uuid.UUID) error{
 	l.mu.Lock()
-	defer l.mu.UnLock()
+	defer l.mu.Unlock()
 
-	entry, exists := l.LedgerEntry[txID]
+	entry, exists := l.Entries[txID]
 	if(!exists){
 		return errors.New("transaction not found")
 	}
@@ -109,8 +112,8 @@ func (l *Ledger) Settle(txID uuid.UUID) error{
 		return errors.New("transaction already finalized")
 	}
 
-	sender := l.getOrCreateAccount(entry.SenderID)
-	receiver := l.getOrCreateAccount(entry.ReceiverID)
+	sender := l.getOrCreateAcc(entry.SenderID)
+	receiver := l.getOrCreateAcc(entry.ReceiverID)
 
 	lockedAmount, ok := sender.LockedFunds[txID]
 	if !ok {
@@ -122,4 +125,45 @@ func (l *Ledger) Settle(txID uuid.UUID) error{
 	entry.Status = Success
 	return nil
 
+}
+
+func (l *Ledger) Void(txID uuid.UUID) error{
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	entry, exists := l.Entries(txID)
+	if(!exists){
+		return errors.New("transaction not found")
+	}
+	if entry.Status != Pending {
+		return errors.New("transaction already finalized")
+	}
+
+	sender := l.getorCreateAcc(entry.SenderID)
+	lockedAmount, ok := sender.LockedFunds[txID]
+	if !ok {
+		return errors.New("locked funds not found")
+	}
+
+	delete(sender.LockedFunds, txID)
+	sender.Balances[entry.Currency] += lockedAmount
+	entry.Status = Failed
+	return nil
+
+
+}
+
+
+func (l *Ledger) Credit(amount float64, currency string, userID string){
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	acc := l.getorCreateAcc(userID)
+	acc.Balances[currency] += amount
+}
+
+
+func (l *Ledger) GetBalance(userID string, currency string) float64{
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	acc := l.getorCreateAcc(userID)
+	return acc.Balances[currency]
 }
