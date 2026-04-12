@@ -1,60 +1,26 @@
-package main
-import(
+package transport
+
+import (
 	"net/http"
-	"github.com/gin-gonic/gin"
-	"backend/internal/engine"
-	"backend/internal/transport"
-	"github.com/google/uuid"
-	"backend/internal/models/packet"
+	"sort"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+
+	"backend/internal/engine"
+	"backend/internal/finance"
+	"backend/internal/models/packet"
 )
 
-var BlackHole = packet.Point{X: 4500, Y: 0, Z: 0}
-
-const(
-	SpeedOfLight float64 = 50.0
-)
-
-
-// flow:
-// Scheduler >> Hub >> client.send >> Write >> Websocket
-
-
-type TransferRequest struct{
+type TransferRequest struct {
 	OriginPlanet      string  `json:"origin_planet" binding:"required"`
-    DestinationPlanet string  `json:"destination_planet" binding:"required"`
-    Amount            float64 `json:"amount" binding:"required,gt=0"`
-	CurrencyID		  string   `json:"currency_id" binding:"required"`
+	DestinationPlanet string  `json:"destination_planet" binding:"required"`
+	Amount            float64 `json:"amount" binding:"required,gt=0"`
+	CurrencyID        string  `json:"currency_id" binding:"required"`
 }
 
-func main(){
-	r := gin.Default()
-	hub := transport.NewHub()
-	scheduler := engine.NewScheduler(BlackHole)
-	go hub.Run();
-	stop := make(chan struct{})
-	go scheduler.Start(stop)
-
-	go func(){
-		for stateSnapshot := range scheduler.UpdateChan {
-			hub.Broadcast(stateSnapshot)
-		}
-	}()
-
-	r.POST("/transfer", func(ctx *gin.Context) {
-		TransferHandler(ctx, scheduler)
-	})
-	r.GET("/ws", func(ctx *gin.Context) {
-		// Send current state to new client immediately
-		currentState := scheduler.GetState()
-		transport.ServeWS(ctx, uuid.New().String(), hub, currentState)
-	})
-
-	r.Run(":8080")
-
-}
-
-func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
+func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler) gin.HandlerFunc {
 	var req TransferRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil{
 		ctx.JSON(http.StatusBadRequest, gin.H{"error" : err.Error()})
@@ -126,3 +92,60 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
 
 
 
+func BalanceHandler(ledger *finance.Ledger) gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		userID := ctx.Param("userID")
+
+		ledger.mu.RLock() 
+		acc, exists := ledger.Accounts[userID]
+		ledger.mu.RUnlock()
+
+		if !exists {
+			ctx.JSON(http.StatusNotFound, gin.H{
+				"error": "account not found",
+			})
+			return
+		}
+
+		escrow := make(map[string]float64)
+
+		for _, entry := range acc.LockedFunds {
+			escrow["total"] += entry
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"user":      userID,
+			"available": acc.Balances,
+			"escrow":    escrow,
+		})
+	}
+}
+
+
+func HistoryHandler(ledger *finance.Ledger) gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+
+		userID := ctx.Param("userID")
+
+		ledger.mu.RLock()
+		defer ledger.mu.RUnlock()
+
+		history := []finance.LedgerEntry{}
+
+		for _, entry := range ledger.Entries {
+
+			if entry.SenderID == userID || entry.ReceiverID == userID {
+				history = append(history, *entry)
+			}
+		}
+
+		sort.Slice(history, func(i, j int) bool {
+			return history[i].Timestamp.After(history[j].Timestamp)
+		})
+
+		ctx.JSON(http.StatusOK, history)
+	}
+}
