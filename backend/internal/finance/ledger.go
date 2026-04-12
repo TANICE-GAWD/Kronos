@@ -52,7 +52,7 @@ func NewLedger() *Ledger {
 }
 
 
-func (l *Ledger) getorCreateAcc(userID string) *Account{ // why my naming sense so bad bro T_T
+func (l *Ledger) getOrCreateAcc(userID string) *Account{ // why my naming sense so bad bro T_T
 	acc,exists := l.Accounts[userID]
 	if !exists{
 		acc = &Account{
@@ -77,10 +77,10 @@ func (l *Ledger) LockFunds(
 ) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	acc := l.getorCreateAcc(userID)
+	acc := l.getOrCreateAcc(userID)
 	available := acc.Balances[currency]
 	if(available<amount){
-		return errors.New("Get your money up...insufficient balance")
+		return errors.New("insufficient balance")
 	}
 	acc.Balances[currency] -= amount
 	acc.LockedFunds[txID] = amount
@@ -130,7 +130,7 @@ func (l *Ledger) Settle(txID uuid.UUID) error{
 func (l *Ledger) Void(txID uuid.UUID) error{
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	entry, exists := l.Entries(txID)
+	entry, exists := l.Entries[txID]
 	if(!exists){
 		return errors.New("transaction not found")
 	}
@@ -138,7 +138,7 @@ func (l *Ledger) Void(txID uuid.UUID) error{
 		return errors.New("transaction already finalized")
 	}
 
-	sender := l.getorCreateAcc(entry.SenderID)
+	sender := l.getOrCreateAcc(entry.SenderID)
 	lockedAmount, ok := sender.LockedFunds[txID]
 	if !ok {
 		return errors.New("locked funds not found")
@@ -156,7 +156,7 @@ func (l *Ledger) Void(txID uuid.UUID) error{
 func (l *Ledger) Credit(amount float64, currency string, userID string){
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	acc := l.getorCreateAcc(userID)
+	acc := l.getOrCreateAcc(userID)
 	acc.Balances[currency] += amount
 }
 
