@@ -161,9 +161,20 @@ func (l *Ledger) Credit(amount float64, currency string, userID string){
 }
 
 
-func (l *Ledger) GetBalance(userID string, currency string) float64{
+func (l *Ledger) GetBalance(userID string, currency string) (float64, error) {
+
 	l.mu.RLock()
 	defer l.mu.RUnlock()
-	acc := l.getorCreateAcc(userID)
-	return acc.Balances[currency]
+
+	acc, exists := l.Accounts[userID]
+	if !exists {
+		return 0, errors.New("account not found") 
+	}
+
+	balance, ok := acc.Balances[currency]
+	if !ok {
+		return 0, nil 
+	}
+
+	return balance, nil
 }
