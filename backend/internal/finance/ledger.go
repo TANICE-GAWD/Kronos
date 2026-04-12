@@ -18,7 +18,7 @@ const(
 
 type Account struct{
 	UserID uuid `json: "id"`
-	Balances map[string]float64
+	Balances map[string]float64 //currency_ID : amount
 	LockedFunds map[uuid.UUID]float64
 }
 
@@ -47,9 +47,9 @@ func NewLedger() *Ledger {
 		Entries:  make(map[uuid.UUID]*LedgerEntry),
 	}
 }
-// for the ledger method to add or create
 
-func (l *Ledger) getorCreateAcc(userID string) *Account{
+
+func (l *Ledger) getorCreateAcc(userID string) *Account{ // why my naming sense so bad bro T_T
 	acc,exists := l.Accounts[userID]
 	if !exists{
 		acc := &Account{
@@ -65,15 +65,61 @@ func (l *Ledger) getorCreateAcc(userID string) *Account{
 
 
 
-func LockFunds(u UserID, amount Amount, currency Packet.CurrencyID){
-	Available := Account.Balances[currency]
-	if(Available >= amount){
-		Available -= amount
-		Account.LockedFunds[currency] += amount
+func (l *Ledger) LockedFunds(
+	txID uuid.UUID,
+	userID string,
+	receiverID string,
+	currency string,
+	amount float64,
+) error {
+	l.mu.Lock()
+	defer l.mu.UnLock
+	acc := getorCreateAcc(userID)
+	available := acc.Balances[currency]
+	if(available<amount){
+		return errors.New("Get your money up")
+	}
+	acc.Balances[currency] -= amount
+	acc.LockedFunds[txID] += amount
+
+	l.Entries[txID] = &LedgerEntry{
+		ID: txID,
+		Amount : amount,
+		Currency:   currency,
+		SenderID:   userID,
+		ReceiverID: receiverID,
+		Timestamp:  time.Now(),
+		Status:     Pending,
 	}
 
+	return nil
 }
 
-func Settle(sender SenderID, receiver ReceiverID, amount Amount, currency Packet.CurrencyID){
-	LockedFunds[currency]
+
+func (l *Ledger) Settle(txID uuid.UUID) error{
+	l.mu.Lock()
+	defer l.mu.UnLock()
+
+	entry, exists := l.LedgerEntry[txID]
+	if(!exists){
+		return errors.New("transaction not found")
+	}
+
+	if entry.Status != Pending {
+		return errors.New("transaction already finalized")
+	}
+
+	sender := l.getOrCreateAccount(entry.SenderID)
+	receiver := l.getOrCreateAccount(entry.ReceiverID)
+
+	lockedAmount, ok := sender.LockedFunds[txID]
+	if !ok {
+		return errors.New("locked funds not found")
+	}
+
+	delete(sender.LockedFunds, txID)
+	receiver.Balances[entry.Currency] += lockedAmount
+	entry.Status = Success
+	return nil
+
 }
