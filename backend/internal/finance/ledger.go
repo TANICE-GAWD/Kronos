@@ -10,6 +10,14 @@ import(
 )
 
 // need a triple state ledger >> Available, In-Flight, Settled
+// delete
+func SeedLedger(l *Ledger) {
+
+	l.Credit(10000, "GAL-CR", "earth")
+	l.Credit(10000, "GAL-CR", "mars")
+	l.Credit(5000, "GAL-CR", "venus")
+	l.Credit(2000, "GAL-CR", "jupiter")
+}
 
 type TxStatus string
 
