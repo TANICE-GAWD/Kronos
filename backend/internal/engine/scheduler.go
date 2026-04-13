@@ -19,11 +19,12 @@ type Scheduler struct{
 }
 
 
-func NewScheduler(blackHole packet.Point) *Scheduler {
+func NewScheduler(blackHole packet.Point, ledger *finance.Ledger) *Scheduler {
 	return &Scheduler{
 		ActivePackets: make(map[uuid.UUID]*packet.Packet), 
 		BlackHole:     blackHole,
 		UpdateChan:    make(chan packet.StateUpdate, 16), 
+		ledger : ledger,
 	}
 }
 
@@ -42,12 +43,31 @@ func (s *Scheduler) Start(stopChan <-chan struct{}){
 			deltaTime := now.Sub(last).Seconds()
 			last = now
 			s.mu.Lock()
-for key, p := range s.ActivePackets{
-	RunPhysics(p, s.BlackHole, deltaTime)
-	if(p.Status == packet.Settled || p.Status == packet.Destroyed){
-		keysToDelete = append(keysToDelete,key)
-	}
-}
+			for key, p := range s.ActivePackets {
+
+				RunPhysics(p, s.BlackHole, deltaTime)
+
+				if p.Status == packet.Settled {
+
+					
+					err := s.ledger.Settle(p.ID)
+					if err != nil {
+						fmt.Println("Settle error:", err)
+					}
+
+					keysToDelete = append(keysToDelete, key)
+
+				} else if p.Status == packet.Destroyed {
+
+					// refund
+					err := s.ledger.Void(p.ID)
+					if err != nil {
+						fmt.Println("Void error:", err)
+					}
+
+					keysToDelete = append(keysToDelete, key)
+				}
+			}
 			
 			if s.UpdateChan != nil {
 				stateCopy := make(map[uuid.UUID]packet.Packet)
@@ -66,7 +86,6 @@ for key, p := range s.ActivePackets{
 				}
 			}
 
-			
 				
 			// if p.Status == packet.Settled {
 			// 	ledger.Settle(p.ID)   
