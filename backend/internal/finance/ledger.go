@@ -178,3 +178,37 @@ func (l *Ledger) GetBalance(userID string, currency string) (float64, error) {
 
 	return balance, nil
 }
+
+
+// these 2 func is to help handler func of balacne nad history in handler.go
+func (l *Ledger) GetAccountSnapshot(userID string) (map[string]float64, float64, error) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	acc, exists := l.Accounts[userID]
+	if !exists {
+		return nil, 0, errors.New("account not found")
+	}
+
+	var escrow float64
+	for _, amount := range acc.LockedFunds {
+		escrow += amount
+	}
+
+	return acc.Balances, escrow, nil
+}
+
+func (l *Ledger) GetHistory(userID string) []LedgerEntry {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	history := []LedgerEntry{}
+
+	for _, entry := range l.Entries {
+		if entry.SenderID == userID || entry.ReceiverID == userID {
+			history = append(history, *entry)
+		}
+	}
+
+	return history
+}

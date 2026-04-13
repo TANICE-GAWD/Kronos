@@ -104,27 +104,17 @@ func BalanceHandler(ledger *finance.Ledger) gin.HandlerFunc {
 
 		userID := ctx.Param("userID")
 
-		ledger.mu.RLock() 
-		acc, exists := ledger.Accounts[userID]
-		ledger.mu.RUnlock()
-
-		if !exists {
+		balances, escrow, err := ledger.GetAccountSnapshot(userID)
+		if err != nil {
 			ctx.JSON(http.StatusNotFound, gin.H{
-				"error": "account not found",
+				"error": err.Error(),
 			})
 			return
 		}
 
-		// escrow := make(map[string]float64)
-		var escrow float64
-
-		for _, amount := range acc.LockedFunds {
-			escrow += amount
-		}
-
 		ctx.JSON(http.StatusOK, gin.H{
 			"user":      userID,
-			"available": acc.Balances,
+			"available": balances,
 			"escrow":    escrow,
 		})
 	}
@@ -137,17 +127,7 @@ func HistoryHandler(ledger *finance.Ledger) gin.HandlerFunc {
 
 		userID := ctx.Param("userID")
 
-		ledger.mu.RLock()
-		defer ledger.mu.RUnlock()
-
-		history := []finance.LedgerEntry{}
-
-		for _, entry := range ledger.Entries {
-
-			if entry.SenderID == userID || entry.ReceiverID == userID {
-				history = append(history, *entry)
-			}
-		}
+		history := ledger.GetHistory(userID)
 
 		sort.Slice(history, func(i, j int) bool {
 			return history[i].Timestamp.After(history[j].Timestamp)
