@@ -24,7 +24,7 @@ func NewScheduler(blackHole packet.Point, ledger *finance.Ledger) *Scheduler {
 		ActivePackets: make(map[uuid.UUID]*packet.Packet), 
 		BlackHole:     blackHole,
 		UpdateChan:    make(chan packet.StateUpdate, 16), 
-		ledger : ledger
+		ledger : ledger,
 	}
 }
 
