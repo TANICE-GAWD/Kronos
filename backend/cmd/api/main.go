@@ -9,7 +9,7 @@ import(
 	"time"
 )
 
-var BlackHole = packet.Point{X: 4500, Y: 0, Z: 0}
+var BlackHole = packet.Point{X: 0, Y: 0, Z: 100}
 
 const(
 	SpeedOfLight float64 = 50.0
@@ -62,22 +62,6 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
 	}
 
 	now := time.Now()
-	txID := uuid.New()
-
-	err := ledger.LockFunds(
-		txID,
-		req.OriginPlanet,
-		req.DestinationPlanet,
-		req.CurrencyID,
-		req.Amount,
-	)
-
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "Insufficient Star Credits",
-		})
-		return
-	}
 
 	// originPlanet, ok := engine.GetPlanet(req.OriginPlanet)
 	// if !ok {
@@ -103,9 +87,10 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
 		return
 	}
 
+	id := uuid.New()
 
 	p := &packet.Packet{
-		ID: txID,
+		ID: id,
 		Start: originPos,
 		End: destPos,
 		DestinationPlanet: req.DestinationPlanet,
@@ -116,13 +101,12 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
 		},
 		LaunchTime: time.Now(),
 		Status: packet.Active,
-		DilationFactor: 1.0,
+		DilationFactor: 1,
 		Velocity: SpeedOfLight,
 	}
 
 	scheduler.AddPacket(p)
 	ctx.JSON(http.StatusOK, gin.H{"id" : id, "status" : "active"})
 }
-
 
 

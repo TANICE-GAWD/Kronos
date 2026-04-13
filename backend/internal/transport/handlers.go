@@ -24,7 +24,7 @@ type TransferRequest struct {
 	CurrencyID        string  `json:"currency_id" binding:"required"`
 }
 
-func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler, ledger *finance.Ledger) gin.HandlerFunc {
+func TransferHandler(scheduler *engine.Scheduler, ledger *finance.Ledger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req TransferRequest
 		if err := ctx.ShouldBindJSON(&req); err != nil{
@@ -35,20 +35,7 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler, ledger *fina
 		now := time.Now()
 		txID := uuid.New()
 
-		err := ledger.LockFunds(
-			txID,
-			req.OriginPlanet,
-			req.DestinationPlanet,
-			req.CurrencyID,
-			req.Amount,
-		)
 
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{
-				"error": "Insufficient Star Credits",
-			})
-			return
-		}
 
 		// originPlanet, ok := engine.GetPlanet(req.OriginPlanet)
 		// if !ok {
@@ -74,6 +61,20 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler, ledger *fina
 			return
 		}
 
+		err := ledger.LockFunds(
+			txID,
+			req.OriginPlanet,
+			req.DestinationPlanet,
+			req.CurrencyID,
+			req.Amount,
+		)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "Insufficient Star Credits",
+			})
+			return
+		}
 
 		p := &packet.Packet{
 			ID: txID,
@@ -85,7 +86,7 @@ func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler, ledger *fina
 				Amount: req.Amount,
 				CurrencyID: req.CurrencyID,
 			},
-			LaunchTime: time.Now(),
+			LaunchTime: now,
 			Status: packet.Active,
 			DilationFactor: 1.0,
 			Velocity: SpeedOfLight,
