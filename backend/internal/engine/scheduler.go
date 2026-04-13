@@ -65,13 +65,13 @@ func (s *Scheduler) Start(stopChan <-chan struct{}){
 			}
 
 				
-			if p.Status == packet.Settled {
-				ledger.Settle(p.ID)   
-			}
+			// if p.Status == packet.Settled {
+			// 	ledger.Settle(p.ID)   
+			// }
 
-			if p.Status == packet.Destroyed {
-				ledger.Void(p.ID)
-			}
+			// if p.Status == packet.Destroyed {
+			// 	ledger.Void(p.ID)
+			// }
 
 			for _, key := range keysToDelete{
 					fmt.Printf("[Scheduler] Removing packet %s with status %s\n", key, s.ActivePackets[key].Status)

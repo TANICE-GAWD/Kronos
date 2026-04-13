@@ -13,6 +13,10 @@ import (
 	"backend/internal/models/packet"
 )
 
+const(
+	SpeedOfLight float64 = 50.0
+)
+
 type TransferRequest struct {
 	OriginPlanet      string  `json:"origin_planet" binding:"required"`
 	DestinationPlanet string  `json:"destination_planet" binding:"required"`
@@ -20,74 +24,76 @@ type TransferRequest struct {
 	CurrencyID        string  `json:"currency_id" binding:"required"`
 }
 
-func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler) gin.HandlerFunc {
-	var req TransferRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil{
-		ctx.JSON(http.StatusBadRequest, gin.H{"error" : err.Error()})
-		return
+func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler, ledger *finance.Ledger) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var req TransferRequest
+		if err := ctx.ShouldBindJSON(&req); err != nil{
+			ctx.JSON(http.StatusBadRequest, gin.H{"error" : err.Error()})
+			return
+		}
+
+		now := time.Now()
+		txID := uuid.New()
+
+		err := ledger.LockFunds(
+			txID,
+			req.OriginPlanet,
+			req.DestinationPlanet,
+			req.CurrencyID,
+			req.Amount,
+		)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{
+				"error": "Insufficient Star Credits",
+			})
+			return
+		}
+
+		// originPlanet, ok := engine.GetPlanet(req.OriginPlanet)
+		// if !ok {
+		// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown origin planet"})
+		// 	return
+		// }
+
+		// destPlanet, ok := engine.GetPlanet(req.DestinationPlanet)
+		// if !ok {
+		// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown destination planet"})
+		// 	return
+		// }
+
+		originPos, ok := engine.GetPlanetPosition(req.OriginPlanet, now)
+		if !ok {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown origin planet"})
+			return
+		}
+
+		destPos, ok := engine.GetPlanetPosition(req.DestinationPlanet, now)
+		if !ok {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown destination planet"})
+			return
+		}
+
+
+		p := &packet.Packet{
+			ID: txID,
+			Start: originPos,
+			End: destPos,
+			DestinationPlanet: req.DestinationPlanet,
+			CurrentPos: originPos,
+			Payload: packet.Payload{
+				Amount: req.Amount,
+				CurrencyID: req.CurrencyID,
+			},
+			LaunchTime: time.Now(),
+			Status: packet.Active,
+			DilationFactor: 1.0,
+			Velocity: SpeedOfLight,
+		}
+
+		scheduler.AddPacket(p)
+		ctx.JSON(http.StatusOK, gin.H{"id" : txID, "status" : "active"})
 	}
-
-	now := time.Now()
-	txID := uuid.New()
-
-	err := ledger.LockFunds(
-		txID,
-		req.OriginPlanet,
-		req.DestinationPlanet,
-		req.CurrencyID,
-		req.Amount,
-	)
-
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "Insufficient Star Credits",
-		})
-		return
-	}
-
-	// originPlanet, ok := engine.GetPlanet(req.OriginPlanet)
-	// if !ok {
-	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown origin planet"})
-	// 	return
-	// }
-
-	// destPlanet, ok := engine.GetPlanet(req.DestinationPlanet)
-	// if !ok {
-	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown destination planet"})
-	// 	return
-	// }
-
-	originPos, ok := engine.GetPlanetPosition(req.OriginPlanet, now)
-	if !ok {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown origin planet"})
-		return
-	}
-
-	destPos, ok := engine.GetPlanetPosition(req.DestinationPlanet, now)
-	if !ok {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown destination planet"})
-		return
-	}
-
-
-	p := &packet.Packet{
-		ID: txID,
-		Start: originPos,
-		End: destPos,
-		DestinationPlanet: req.DestinationPlanet,
-		CurrentPos: originPos,
-		Payload: packet.Payload{
-			Amount: req.Amount,
-			CurrencyID: req.CurrencyID,
-		},
-		LaunchTime: time.Now(),
-		Status: packet.Active,
-		DilationFactor: 1.0,
-		Velocity: SpeedOfLight,
-	}
-
-	scheduler.AddPacket(p)
-	ctx.JSON(http.StatusOK, gin.H{"id" : id, "status" : "active"})
 }
 
 
@@ -109,10 +115,11 @@ func BalanceHandler(ledger *finance.Ledger) gin.HandlerFunc {
 			return
 		}
 
-		escrow := make(map[string]float64)
+		// escrow := make(map[string]float64)
+		var escrow float64
 
-		for _, entry := range acc.LockedFunds {
-			escrow["total"] += entry
+		for _, amount := range acc.LockedFunds {
+			escrow += amount
 		}
 
 		ctx.JSON(http.StatusOK, gin.H{
