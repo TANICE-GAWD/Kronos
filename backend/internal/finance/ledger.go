@@ -21,11 +21,13 @@ func SeedLedger(l *Ledger) {
 
 type TxStatus string
 
+
 const(
 	Pending TxStatus = "pending"
 	Success TxStatus = "success"
 	Failed  TxStatus = "failed"
 )
+
 
 type Account struct{
 	UserID string `json:"id"` // string coz it will be planet names
@@ -188,7 +190,7 @@ func (l *Ledger) GetBalance(userID string, currency string) (float64, error) {
 }
 
 
-// these 2 func is to help handler func of balacne nad history in handler.go
+// these 2 func is to help handler func of balacne and history in handler.go
 func (l *Ledger) GetAccountSnapshot(userID string) (map[string]float64, float64, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
