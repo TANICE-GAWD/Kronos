@@ -1,113 +1,113 @@
-// package main
-// import(
-// 	"net/http"
-// 	"github.com/gin-gonic/gin"
-// 	"backend/internal/engine"
-// 	"backend/internal/transport"
-// 	"github.com/google/uuid"
-// 	"backend/internal/models/packet"
-// 	"time"
-// )
-
-// var BlackHole = packet.Point{X: 0, Y: 0, Z: 100}
-
-// const(
-// 	SpeedOfLight float64 = 50.0
-// )
 
 
-// // flow:
-// // Scheduler >> Hub >> client.send >> Write >> Websocket
 
 
-// type TransferRequest struct{
-// 	OriginPlanet      string  `json:"origin_planet" binding:"required"`
-//     DestinationPlanet string  `json:"destination_planet" binding:"required"`
-//     Amount            float64 `json:"amount" binding:"required,gt=0"`
-// 	CurrencyID		  string   `json:"currency_id" binding:"required"`
-// }
 
-// func main(){
-// 	r := gin.Default()
-// 	hub := transport.NewHub()
-// 	scheduler := engine.NewScheduler(BlackHole)
-// 	go hub.Run();
-// 	stop := make(chan struct{})
-// 	go scheduler.Start(stop)
 
-// 	go func(){
-// 		for stateSnapshot := range scheduler.UpdateChan {
-// 			hub.Broadcast(stateSnapshot)
-// 		}
-// 	}()
 
-// 	r.POST("/transfer", func(ctx *gin.Context) {
-// 		TransferHandler(ctx, scheduler)
-// 	})
-// 	r.GET("/ws", func(ctx *gin.Context) {
-// 		// Send current state to new client immediately
-// 		currentState := scheduler.GetState()
-// 		transport.ServeWS(ctx, uuid.New().String(), hub, currentState)
-// 	})
 
-// 	r.Run(":8080")
 
-// }
 
-// func TransferHandler(ctx *gin.Context, scheduler *engine.Scheduler){
-// 	var req TransferRequest
-// 	if err := ctx.ShouldBindJSON(&req); err != nil{
-// 		ctx.JSON(http.StatusBadRequest, gin.H{"error" : err.Error()})
-// 		return
-// 	}
 
-// 	now := time.Now()
 
-// 	// originPlanet, ok := engine.GetPlanet(req.OriginPlanet)
-// 	// if !ok {
-// 	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown origin planet"})
-// 	// 	return
-// 	// }
 
-// 	// destPlanet, ok := engine.GetPlanet(req.DestinationPlanet)
-// 	// if !ok {
-// 	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown destination planet"})
-// 	// 	return
-// 	// }
 
-// 	originPos, ok := engine.GetPlanetPosition(req.OriginPlanet, now)
-// 	if !ok {
-// 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown origin planet"})
-// 		return
-// 	}
 
-// 	destPos, ok := engine.GetPlanetPosition(req.DestinationPlanet, now)
-// 	if !ok {
-// 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "unknown destination planet"})
-// 		return
-// 	}
 
-// 	id := uuid.New()
 
-// 	p := &packet.Packet{
-// 		ID: id,
-// 		Start: originPos,
-// 		End: destPos,
-// 		DestinationPlanet: req.DestinationPlanet,
-// 		CurrentPos: originPos,
-// 		Payload: packet.Payload{
-// 			Amount: req.Amount,
-// 			CurrencyID: req.CurrencyID,
-// 		},
-// 		LaunchTime: time.Now(),
-// 		Status: packet.Active,
-// 		DilationFactor: 1,
-// 		Velocity: SpeedOfLight,
-// 	}
 
-// 	scheduler.AddPacket(p)
-// 	ctx.JSON(http.StatusOK, gin.H{"id" : id, "status" : "active"})
-// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -115,44 +115,74 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"fmt"
+	"log"
+	"os"
 
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+
+	"backend/internal/auth"
 	"backend/internal/engine"
 	"backend/internal/finance"
 	"backend/internal/models/packet"
+	"backend/internal/repository"
 	"backend/internal/transport"
 )
 
 var BlackHole = packet.Point{X: 0, Y: 0, Z: 100}
 
 func main() {
+	
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found, using system environment variables")
+	}
 
-	r := gin.Default()
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal("DATABASE_URL environment variable is not set")
+	}
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "your-secret-key-change-in-production" 
+		log.Println("Warning: JWT_SECRET not set, using insecure default")
+	}
 
 	
-	
-	
+	postgresRepo, err := repository.NewPostgresRepository(databaseURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer postgresRepo.Close()
+	log.Println("✓ Database connected successfully")
 
-	ledger := finance.NewLedger() 
+	
+	db := postgresRepo.GetDB()
+	userRepository := repository.NewUserRepository(db)
+	walletRepository := repository.NewWalletRepository(db)
+	log.Println("✓ Repositories initialized")
+
+	
+	authService := auth.NewAuthService(userRepository, walletRepository, jwtSecret)
+	log.Println("✓ Auth service initialized")
+
+	
+	ledger := finance.NewLedger()
 	finance.SeedLedger(ledger)
+	log.Println("✓ Ledger initialized")
 
 	hub := transport.NewHub()
-
-	scheduler := engine.NewScheduler(BlackHole, ledger) 
-
+	scheduler := engine.NewScheduler(BlackHole, ledger)
 	stop := make(chan struct{})
+	log.Println("✓ Engine components initialized")
 
 	
-	
-	
-
 	go hub.Run()
 	go scheduler.Start(stop)
+	log.Println("✓ Hub and scheduler started")
 
 	
-	
-	
-
 	go func() {
 		for stateSnapshot := range scheduler.UpdateChan {
 			hub.Broadcast(stateSnapshot)
@@ -160,24 +190,42 @@ func main() {
 	}()
 
 	
-	
-	
+	r := gin.Default()
+	log.Println("✓ Gin router initialized")
 
 	
-	r.POST("/transfer", transport.TransferHandler(scheduler, ledger))
+	public := r.Group("/api")
+	{
+		public.POST("/register", transport.RegisterHandler(authService))
+		public.POST("/login", transport.LoginHandler(authService))
+	}
+	log.Println("✓ Public routes registered: /api/register, /api/login")
 
 	
-	r.GET("/balance/:userID", transport.BalanceHandler(ledger))
+	protected := r.Group("/api")
+	protected.Use(transport.AuthMiddleware(authService))
+	{
+		protected.POST("/transfer", transport.TransferHandler(scheduler, ledger))
+		protected.GET("/balance/:userID", transport.BalanceHandler(ledger))
+		protected.GET("/history/:userID", transport.HistoryHandler(ledger))
+	}
+	log.Println("✓ Protected routes registered: /api/transfer, /api/balance, /api/history")
 
 	
-	r.GET("/history/:userID", transport.HistoryHandler(ledger))
-
 	r.GET("/ws", func(ctx *gin.Context) {
 		currentState := scheduler.GetState()
 		transport.ServeWS(ctx, "client", hub, currentState)
 	})
+	log.Println("✓ WebSocket route registered: /ws")
 
+	
+	fmt.Println("\n🚀 Kronos Backend API Server Starting on :8080")
+	fmt.Println("   Database: Connected to PostgreSQL")
+	fmt.Println("   Auth: JWT-based authentication enabled")
+	fmt.Println("   Routes: Public (/api/register, /api/login) + Protected + WebSocket")
+	fmt.Println()
 
-
-	r.Run(":8080")
+	if err := r.Run(":8080"); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
