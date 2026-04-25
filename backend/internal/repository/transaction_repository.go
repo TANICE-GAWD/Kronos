@@ -16,6 +16,7 @@ type TransactionRepository interface {
 	SettleTransaction(ctx context.Context, transactionID, senderID, receiverID uuid.UUID, amount float64, currencyID string) error
 	VoidTransaction(ctx context.Context, transactionID, senderID uuid.UUID, amount float64, currencyID string) error
 	GetTransaction(ctx context.Context, transactionID uuid.UUID) (*models.Transaction, error)
+	GetAllTransactions(ctx context.Context) ([]*models.Transaction, error)
 }
 
 
@@ -228,4 +229,45 @@ func (r *TransactionRepositoryImpl) GetTransaction(ctx context.Context, transact
 	}
 
 	return transaction, nil
+}
+
+// GetAllTransactions retrieves all transactions from the database
+func (r *TransactionRepositoryImpl) GetAllTransactions(ctx context.Context) ([]*models.Transaction, error) {
+	query := `
+		SELECT id, sender_id, receiver_id, amount, status, origin_planet, destination_planet, created_at, updated_at
+		FROM transactions
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query transactions: %w", err)
+	}
+	defer rows.Close()
+
+	transactions := []*models.Transaction{}
+	for rows.Next() {
+		transaction := &models.Transaction{}
+		err := rows.Scan(
+			&transaction.ID,
+			&transaction.SenderID,
+			&transaction.ReceiverID,
+			&transaction.Amount,
+			&transaction.Status,
+			&transaction.OriginPlanet,
+			&transaction.DestinationPlanet,
+			&transaction.CreatedAt,
+			&transaction.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan transaction: %w", err)
+		}
+		transactions = append(transactions, transaction)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating transactions: %w", err)
+	}
+
+	return transactions, nil
 }

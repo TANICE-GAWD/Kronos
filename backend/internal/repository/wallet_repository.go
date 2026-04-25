@@ -16,6 +16,7 @@ type WalletRepository interface {
 	GetWalletByUserIDAndCurrency(ctx context.Context, userID uuid.UUID, currencyID string) (*models.Wallet, error)
 	UpdateWalletBalance(ctx context.Context, walletID uuid.UUID, availableBalance, lockedBalance float64) error
 	LockFundsInWallet(ctx context.Context, walletID uuid.UUID, amount float64) error
+	GetAllWallets(ctx context.Context) ([]*models.Wallet, error)
 }
 
 
@@ -139,4 +140,43 @@ func (r *WalletRepositoryImpl) LockFundsInWallet(ctx context.Context, walletID u
 	}
 
 	return nil
+}
+
+// GetAllWallets retrieves all wallets from the database
+func (r *WalletRepositoryImpl) GetAllWallets(ctx context.Context) ([]*models.Wallet, error) {
+	query := `
+		SELECT id, user_id, currency_id, available_balance, locked_balance, created_at, updated_at
+		FROM wallets
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query wallets: %w", err)
+	}
+	defer rows.Close()
+
+	wallets := []*models.Wallet{}
+	for rows.Next() {
+		wallet := &models.Wallet{}
+		err := rows.Scan(
+			&wallet.ID,
+			&wallet.UserID,
+			&wallet.CurrencyID,
+			&wallet.AvailableBalance,
+			&wallet.LockedBalance,
+			&wallet.CreatedAt,
+			&wallet.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan wallet: %w", err)
+		}
+		wallets = append(wallets, wallet)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating wallets: %w", err)
+	}
+
+	return wallets, nil
 }

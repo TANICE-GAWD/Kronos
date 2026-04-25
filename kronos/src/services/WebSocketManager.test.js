@@ -29,7 +29,7 @@ export async function testWebSocketManager(wsUrl = 'ws://localhost:8080/ws') {
       updateCount++;
       
       console.log(`\n[Update #${updateCount}] State received:`, {
-        packetCount: state.packets?.length || 0,
+        packetCount: Object.keys(state.packets || {}).length || 0,
         walletCount: Object.keys(state.wallets || {}).length,
         transactionCount: state.transactions?.length || 0,
         timestamp: new Date(state.timestamp).toLocaleTimeString()

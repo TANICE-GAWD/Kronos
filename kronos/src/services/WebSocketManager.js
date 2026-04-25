@@ -22,7 +22,7 @@ class WebSocketManager {
     
     // Current state from server
     this.state = {
-      packets: [],           // Active 3D packets in transit
+      packets: {},           // Active 3D packets in transit {packetID: Packet}
       wallets: {},           // User wallets {userID: {currency: balance}}
       transactions: [],      // Recent transactions
       users: {},            // User info {userID: {username, homePlanet}}
@@ -145,19 +145,17 @@ class WebSocketManager {
 
   /**
    * Diff packets: Detect added, updated, removed packets
+   * Handles packets as objects: {packetID: Packet, ...}
    * @returns {object} { added: [], updated: [], removed: [] }
    */
   diffPackets(oldPackets, newPackets) {
-    const oldMap = new Map(oldPackets.map(p => [p.id, p]));
-    const newMap = new Map(newPackets.map(p => [p.id, p]));
-
     const added = [];
     const updated = [];
     const removed = [];
 
     // Find added and updated packets
-    for (const [id, newPacket] of newMap) {
-      const oldPacket = oldMap.get(id);
+    for (const [id, newPacket] of Object.entries(newPackets)) {
+      const oldPacket = oldPackets[id];
       if (!oldPacket) {
         added.push(newPacket);
       } else if (!this.packetsEqual(oldPacket, newPacket)) {
@@ -171,8 +169,8 @@ class WebSocketManager {
     }
 
     // Find removed packets
-    for (const [id, oldPacket] of oldMap) {
-      if (!newMap.has(id)) {
+    for (const [id, oldPacket] of Object.entries(oldPackets)) {
+      if (!(id in newPackets)) {
         removed.push(oldPacket);
       }
     }
@@ -220,6 +218,13 @@ class WebSocketManager {
   }
 
   /**
+   * Check if two wallets are equal (deep comparison)
+   */
+  walletsEqual(w1, w2) {
+    return JSON.stringify(w1) === JSON.stringify(w2);
+  }
+
+  /**
    * Diff wallets: Detect balance changes
    * @returns {object} { changed: [] }
    */
@@ -236,8 +241,8 @@ class WebSocketManager {
           type: 'added',
           wallet: newWallet
         });
-      } else if (oldWallet !== newWallet) {
-        // Wallet changed
+      } else if (!this.walletsEqual(oldWallet, newWallet)) {
+        // Wallet changed - do deep comparison
         changed.push({
           userId,
           type: 'updated',

@@ -84,8 +84,8 @@ func (s *Scheduler) Start(stopChan <-chan struct{}){
 				}
 				if len(stateCopy) > 0 {
 					update := packet.StateUpdate{
-							Packets:    stateCopy,
-							ServerTime: time.Now().UnixNano() / int64(time.Millisecond),
+							Packets:   stateCopy,
+							Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
 					}
 					select{
 					case s.UpdateChan <- update:

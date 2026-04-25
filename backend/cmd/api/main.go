@@ -59,7 +59,7 @@ func main() {
 	finance.SeedLedger(ledger)
 	log.Println("✓ Ledger initialized")
 
-	hub := transport.NewHub()
+	hub := transport.NewHub(walletRepository, transactionRepository, userRepository)
 	scheduler := engine.NewScheduler(BlackHole, ledger, transactionRepository)
 	stop := make(chan struct{})
 	log.Println("✓ Engine components initialized")

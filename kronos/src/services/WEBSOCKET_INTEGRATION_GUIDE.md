@@ -72,7 +72,7 @@ export function Scene3D() {
       <div ref={sceneRef} style={{ width: '100%', height: '600px' }} />
       <div style={{ fontSize: '12px', color: '#666' }}>
         Connection: {isConnected ? '✓ Connected' : '✗ Disconnected'}
-        | Packets: {state?.packets?.length || 0}
+        | Packets: {Object.keys(state?.packets || {}).length || 0}
       </div>
     </div>
   );

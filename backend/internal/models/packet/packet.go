@@ -34,8 +34,11 @@ type Payload struct {
 }
 
 type StateUpdate struct {
-        ServerTime int64                `json:"server_time"`
-        Packets    map[uuid.UUID]Packet `json:"packets"`
+	Timestamp    int64                          `json:"timestamp"`
+	Packets      map[uuid.UUID]Packet           `json:"packets"`
+	Wallets      map[string]interface{}         `json:"wallets"`
+	Transactions []map[string]interface{}       `json:"transactions"`
+	Users        map[uuid.UUID]map[string]interface{} `json:"users"`
 }
 
 type Packet struct {

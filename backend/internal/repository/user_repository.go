@@ -15,6 +15,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
+	GetAllUsers(ctx context.Context) ([]*models.User, error)
 }
 
 
@@ -116,4 +117,42 @@ func (r *UserRepositoryImpl) GetUserByID(ctx context.Context, userID uuid.UUID) 
 	}
 
 	return user, nil
+}
+
+// GetAllUsers retrieves all users from the database
+func (r *UserRepositoryImpl) GetAllUsers(ctx context.Context) ([]*models.User, error) {
+	query := `
+		SELECT id, username, password_hash, home_planet, created_at, updated_at
+		FROM users
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query users: %w", err)
+	}
+	defer rows.Close()
+
+	users := []*models.User{}
+	for rows.Next() {
+		user := &models.User{}
+		err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.PasswordHash,
+			&user.HomePlanet,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
 }

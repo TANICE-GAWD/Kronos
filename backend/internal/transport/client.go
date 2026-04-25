@@ -128,15 +128,22 @@ func ServeWS(ctx *gin.Context, roomID string, hub *Hub, initialState map[uuid.UU
 
 	hub.register <- client
 
-	if initialState != nil && len(initialState) > 0 {
-		update := packet.StateUpdate{
-			Packets:    initialState,
-			ServerTime: time.Now().UnixNano() / int64(time.Millisecond),
-		}
-		err := client.Conn.WriteJSON(update)
-		if err != nil {
-			log.Println("Error sending initial state:", err)
-		}
+	// Create initial state update
+	update := packet.StateUpdate{
+		Packets:   initialState,
+		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+	}
+	
+	// Enrich with wallet, transaction, and user data
+	if initialState == nil {
+		update.Packets = make(map[uuid.UUID]packet.Packet)
+	}
+	enrichedState := hub.EnrichState(update)
+	
+	// Send enriched initial state to client
+	err = client.Conn.WriteJSON(enrichedState)
+	if err != nil {
+		log.Println("Error sending initial state:", err)
 	}
 
 	go client.Write()
