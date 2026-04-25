@@ -1,9 +1,23 @@
-POST Request: A user clicks "Send" on the frontend.
-
-Creation: TransferHandler calculates the 3D vector and hands the packet to the Scheduler.
-
-The Heartbeat: Every 16.6ms, the Scheduler updates the XYZ coordinates based on  Physics laws.
-
-The Stream: The Hub broadcasts these coordinates via WebSockets.
-
-Visualization: Three.js receives the JSON and moves a mesh to the new (x,y,z).
+1. ✓ Extract senderID from verified JWT token
+   └─ GetUserID(ctx) returns UUID from AuthMiddleware
+   
+2. ✓ Load sender's account from database
+   └─ GetUserByID() retrieves home_planet and wallet
+   
+3. ✓ Look up receiver by username from request
+   └─ GetUserByUsername() finds receiver's user ID
+   
+4. ✓ Prevent self-transfers
+   └─ senderID != receiverID
+   
+5. ✓ Validate receiver's wallet exists for currency
+   └─ GetWalletByUserIDAndCurrency() ensures account is ready
+   
+6. ✓ Get 3D planet positions for both users
+   └─ Sender's origin_planet, receiver's destination_planet
+   
+7. ✓ Lock funds in ledger AND create transaction record
+   └─ Both operations must succeed atomically
+   
+8. ✓ Schedule 3D packet with authenticated IDs
+   └─ Packet.SenderID = verified user, Packet.ReceiverID = validated recipient

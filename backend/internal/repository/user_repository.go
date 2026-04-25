@@ -14,6 +14,7 @@ import (
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
+	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
 }
 
 
@@ -71,6 +72,34 @@ func (r *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username str
 
 	user := &models.User{}
 	err := r.db.QueryRowContext(ctx, query, username).Scan(
+		&user.ID,
+		&user.Username,
+		&user.PasswordHash,
+		&user.HomePlanet,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("user not found: %w", err)
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return user, nil
+}
+
+// GetUserByID retrieves a user by their ID
+func (r *UserRepositoryImpl) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+	query := `
+		SELECT id, username, password_hash, home_planet, created_at, updated_at
+		FROM users
+		WHERE id = $1
+	`
+
+	user := &models.User{}
+	err := r.db.QueryRowContext(ctx, query, userID).Scan(
 		&user.ID,
 		&user.Username,
 		&user.PasswordHash,

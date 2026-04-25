@@ -40,8 +40,11 @@ type StateUpdate struct {
 
 type Packet struct {
 	ID         uuid.UUID `json:"id"`
+	SenderID   uuid.UUID `json:"sender_id"`
+	ReceiverID uuid.UUID `json:"receiver_id"`
 	Start      Point     `json:"start"`
 	End        Point     `json:"end"`
+	OriginPlanet string `json:"origin_planet"`
 	DestinationPlanet string `json:"destination_planet"`
 	CurrentPos Point     `json:"current_pos"`
 	Payload    Payload   `json:"payload"`

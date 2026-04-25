@@ -1,117 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 package main
 
 import (
@@ -161,6 +47,7 @@ func main() {
 	db := postgresRepo.GetDB()
 	userRepository := repository.NewUserRepository(db)
 	walletRepository := repository.NewWalletRepository(db)
+	transactionRepository := repository.NewTransactionRepository(db)
 	log.Println("✓ Repositories initialized")
 
 	
@@ -173,7 +60,7 @@ func main() {
 	log.Println("✓ Ledger initialized")
 
 	hub := transport.NewHub()
-	scheduler := engine.NewScheduler(BlackHole, ledger)
+	scheduler := engine.NewScheduler(BlackHole, ledger, transactionRepository)
 	stop := make(chan struct{})
 	log.Println("✓ Engine components initialized")
 
@@ -205,7 +92,7 @@ func main() {
 	protected := r.Group("/api")
 	protected.Use(transport.AuthMiddleware(authService))
 	{
-		protected.POST("/transfer", transport.TransferHandler(scheduler, ledger))
+		protected.POST("/transfer", transport.TransferHandler(scheduler, ledger, userRepository, walletRepository, transactionRepository))
 		protected.GET("/balance/:userID", transport.BalanceHandler(ledger))
 		protected.GET("/history/:userID", transport.HistoryHandler(ledger))
 	}

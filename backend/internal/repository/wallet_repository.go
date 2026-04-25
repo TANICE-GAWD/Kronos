@@ -15,6 +15,7 @@ type WalletRepository interface {
 	CreateWallet(ctx context.Context, wallet *models.Wallet) error
 	GetWalletByUserIDAndCurrency(ctx context.Context, userID uuid.UUID, currencyID string) (*models.Wallet, error)
 	UpdateWalletBalance(ctx context.Context, walletID uuid.UUID, availableBalance, lockedBalance float64) error
+	LockFundsInWallet(ctx context.Context, walletID uuid.UUID, amount float64) error
 }
 
 
@@ -112,6 +113,29 @@ func (r *WalletRepositoryImpl) UpdateWalletBalance(ctx context.Context, walletID
 
 	if rowsAffected == 0 {
 		return fmt.Errorf("wallet not found")
+	}
+
+	return nil
+}
+
+// LockFundsInWallet atomically locks funds by moving from available to locked balance
+func (r *WalletRepositoryImpl) LockFundsInWallet(ctx context.Context, walletID uuid.UUID, amount float64) error {
+	query := `
+		UPDATE wallets
+		SET available_balance = available_balance - $2,
+		    locked_balance = locked_balance + $2
+		WHERE id = $1 AND available_balance >= $2
+		RETURNING available_balance, locked_balance
+	`
+
+	var newAvailable, newLocked float64
+	err := r.db.QueryRowContext(ctx, query, walletID, amount).Scan(&newAvailable, &newLocked)
+	
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("insufficient balance or wallet not found")
+		}
+		return fmt.Errorf("failed to lock funds: %w", err)
 	}
 
 	return nil
