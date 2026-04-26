@@ -13,8 +13,7 @@ import WalletUI from "./components/WalletUI";
 import TransferModal from "./components/TransferModal";
 import Notification from "./components/Notification";
 import { Stars, OrbitControls } from "@react-three/drei";
-import RegisterPage from "./pages/RegisterPage";
-import LoginPage from "./pages/LoginPage";
+import { LoginPage } from "./pages/LoginPage";
 import * as THREE from "three";
 
 function MainScene() {
@@ -197,7 +196,6 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route 
           path="/" 

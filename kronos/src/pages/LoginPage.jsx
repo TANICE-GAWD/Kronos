@@ -1,44 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { User, LogIn } from 'lucide-react';
+import { User, Lock, Globe, Loader, LogIn, UserPlus, ChevronRight } from 'lucide-react';
 import '../styles/AuthPages.css';
 
 export function LoginPage() {
-  const [formData, setFormData] = useState({
+  const [showRegister, setShowRegister] = useState(false);
+  
+  // Login form state
+  const [loginData, setLoginData] = useState({
     username: '',
     password: '',
   });
+  
+  // Register form state
+  const [registerData, setRegisterData] = useState({
+    username: '',
+    password: '',
+    confirmPassword: '',
+    homePlanet: 'Earth',
+  });
+  
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
+  const planets = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'];
+
   useEffect(() => {
-    
     if (location.state?.message) {
       setSuccess(location.state.message);
       setTimeout(() => setSuccess(''), 5000);
     }
   }, [location]);
 
-  const handleChange = (e) => {
+  // LOGIN HANDLERS
+  const handleLoginChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setLoginData(prev => ({
       ...prev,
       [name]: value
     }));
     setError('');
   };
 
-  const handleSubmit = async (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.username.trim()) {
+    if (!loginData.username.trim()) {
       setError('Username is required');
       return;
     }
-    if (!formData.password) {
+    if (!loginData.password) {
       setError('Password is required');
       return;
     }
@@ -52,8 +66,8 @@ export function LoginPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: formData.username.trim(),
-          password: formData.password,
+          username: loginData.username.trim(),
+          password: loginData.password,
         }),
       });
 
@@ -65,7 +79,6 @@ export function LoginPage() {
         return;
       }
 
-      
       if (data.token) {
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('userId', data.user_id);
@@ -75,7 +88,6 @@ export function LoginPage() {
         console.log('✅ Login successful:', data);
         setSuccess(`Welcome back, ${data.username}!`);
 
-        
         setTimeout(() => {
           navigate('/');
         }, 1000);
@@ -87,130 +99,345 @@ export function LoginPage() {
     }
   };
 
-  const handleDemoLogin = async (username, password) => {
-    setFormData({ username, password });
-    
-    
-    setTimeout(async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('http://localhost:8080/api/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            username,
-            password,
-          }),
-        });
+  // REGISTER HANDLERS
+  const handleRegisterChange = (e) => {
+    const { name, value } = e.target;
+    setRegisterData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setError('');
+  };
 
-        const data = await response.json();
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
 
-        if (!response.ok) {
-          setError(data.error || 'Demo login failed');
-          setLoading(false);
-          return;
-        }
+    if (!registerData.username.trim() || registerData.username.length < 3) {
+      setError('Username must be at least 3 characters');
+      return;
+    }
 
-        if (data.token) {
-          localStorage.setItem('authToken', data.token);
-          localStorage.setItem('userId', data.user_id);
-          localStorage.setItem('username', data.username);
-          localStorage.setItem('homePlanet', data.home_planet);
+    if (!registerData.password || registerData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
 
-          console.log('✅ Demo login successful');
-          setSuccess(`Welcome, ${data.username}!`);
+    if (registerData.password !== registerData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
 
-          setTimeout(() => {
-            navigate('/');
-          }, 1000);
-        }
-      } catch (err) {
-        setError('Failed to connect to server: ' + err.message);
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8080/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: registerData.username.trim(),
+          password: registerData.password,
+          home_planet: registerData.homePlanet,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Registration failed');
         setLoading(false);
+        return;
       }
-    }, 100);
+
+      setSuccess('Registration successful! Redirecting to login...');
+      setTimeout(() => {
+        setShowRegister(false);
+        setRegisterData({
+          username: '',
+          password: '',
+          confirmPassword: '',
+          homePlanet: 'Earth',
+        });
+        setLoginData({
+          username: registerData.username,
+          password: '',
+        });
+      }, 1500);
+
+    } catch (err) {
+      setError('Failed to connect to server: ' + err.message);
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async (username, password) => {
+    setLoginData({ username, password });
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8080/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Demo login failed');
+        setLoading(false);
+        return;
+      }
+
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('userId', data.user_id);
+        localStorage.setItem('username', data.username);
+        localStorage.setItem('homePlanet', data.home_planet);
+
+        console.log('✅ Demo login successful');
+        setSuccess(`Welcome, ${data.username}!`);
+
+        setTimeout(() => {
+          navigate('/');
+        }, 1000);
+      }
+    } catch (err) {
+      setError('Failed to connect to server: ' + err.message);
+      setLoading(false);
+    }
   };
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
-        <h1 className="auth-title">  Kronos Login</h1>
-        <p className="auth-subtitle">Access your interplanetary wallet</p>
+      <div className={`auth-card ${showRegister ? 'show-register' : ''}`}>
+        {/* LOGIN FORM */}
+        <form className="auth-form login-form" onSubmit={handleLoginSubmit}>
+          <section>
+            <h2 className="auth-title">
+              <LogIn size={24} style={{ marginRight: '8px' }} />
+              Kronos Login
+            </h2>
 
-        {success && <div className="success-message">{success}</div>}
+            {success && <div className="success-message">{success}</div>}
+            {error && <div className="error-message">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="Enter your username"
+            <div className="form-group">
+              <label htmlFor="login-username">
+                <User size={14} style={{ display: 'inline', marginRight: '6px' }} />
+                Username
+              </label>
+              <input
+                type="text"
+                id="login-username"
+                name="username"
+                value={loginData.username}
+                onChange={handleLoginChange}
+                placeholder="Enter your username"
+                disabled={loading}
+                autoFocus
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="login-password">
+                <Lock size={14} style={{ display: 'inline', marginRight: '6px' }} />
+                Password
+              </label>
+              <input
+                type="password"
+                id="login-password"
+                name="password"
+                value={loginData.password}
+                onChange={handleLoginChange}
+                placeholder="Enter your password"
+                disabled={loading}
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="auth-button"
               disabled={loading}
-              autoFocus
-            />
-          </div>
+            >
+              {loading ? (
+                <>
+                  <Loader size={16} className="spin" />
+                  Logging in...
+                </>
+              ) : (
+                <>
+                  <LogIn size={16} />
+                  Sign In
+                </>
+              )}
+            </button>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              disabled={loading}
-            />
-          </div>
+            <div className="demo-section">
+              <p className="demo-label">Demo Accounts</p>
+              <div className="demo-buttons">
+                <button
+                  type="button"
+                  className="demo-button"
+                  onClick={() => handleDemoLogin('alice', 'password123')}
+                  disabled={loading}
+                >
+                  <User size={14} />
+                  Alice (Mars)
+                </button>
+                <button
+                  type="button"
+                  className="demo-button"
+                  onClick={() => handleDemoLogin('bob', 'password123')}
+                  disabled={loading}
+                >
+                  <User size={14} />
+                  Bob (Earth)
+                </button>
+              </div>
+            </div>
 
-          {error && <div className="error-message">{error}</div>}
-
-          <button
-            type="submit"
-            className="auth-button"
-            disabled={loading}
-          >
-            {loading ? 'Logging in...' : 'Log In'}
-          </button>
+            <div className="auth-footer">
+              <p>
+                Don't have an account?{' '}
+                <a onClick={() => setShowRegister(true)}>Register here</a>
+              </p>
+            </div>
+          </section>
         </form>
 
-        <div className="demo-section">
-          <p className="demo-label">Demo Accounts:</p>
-          <div className="demo-buttons">
-            <button
-              type="button"
-              className="demo-button"
-              onClick={() => handleDemoLogin('alice', 'password123')}
-              disabled={loading}
-            >
-              👨 Alice (Mars)
-            </button>
-            <button
-              type="button"
-              className="demo-button"
-              onClick={() => handleDemoLogin('bob', 'password123')}
-              disabled={loading}
-            >
-              👩 Bob (Earth)
-            </button>
-          </div>
-          <small style={{ textAlign: 'center', marginTop: '10px', display: 'block' }}>
-            Quick access to pre-created test accounts
-          </small>
-        </div>
+        {/* REGISTER FORM */}
+        <form className="auth-form register-form" onSubmit={handleRegisterSubmit}>
+          <section>
+            <h2 className="auth-title">
+              <UserPlus size={24} style={{ marginRight: '8px' }} />
+              Create Account
+            </h2>
 
-        <div className="auth-footer">
-          <p>Don't have an account? <a href="/register">Register here</a></p>
+            {success && <div className="success-message">{success}</div>}
+            {error && <div className="error-message">{error}</div>}
+
+            <div className="form-group">
+              <label htmlFor="register-username">
+                <User size={14} style={{ display: 'inline', marginRight: '6px' }} />
+                Username
+              </label>
+              <input
+                type="text"
+                id="register-username"
+                name="username"
+                value={registerData.username}
+                onChange={handleRegisterChange}
+                placeholder="Choose a username (3+ chars)"
+                disabled={loading}
+                autoFocus
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="register-password">
+                <Lock size={14} style={{ display: 'inline', marginRight: '6px' }} />
+                Password
+              </label>
+              <input
+                type="password"
+                id="register-password"
+                name="password"
+                value={registerData.password}
+                onChange={handleRegisterChange}
+                placeholder="Create a password (8+ chars)"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="register-confirm">
+                <Lock size={14} style={{ display: 'inline', marginRight: '6px' }} />
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                id="register-confirm"
+                name="confirmPassword"
+                value={registerData.confirmPassword}
+                onChange={handleRegisterChange}
+                placeholder="Confirm your password"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="register-planet">
+                <Globe size={14} style={{ display: 'inline', marginRight: '6px' }} />
+                Home Planet
+              </label>
+              <select
+                id="register-planet"
+                name="homePlanet"
+                value={registerData.homePlanet}
+                onChange={handleRegisterChange}
+                disabled={loading}
+              >
+                {planets.map(planet => (
+                  <option key={planet} value={planet}>{planet}</option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              className="auth-button"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader size={16} className="spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <UserPlus size={16} />
+                  Register
+                </>
+              )}
+            </button>
+
+            <div className="auth-footer">
+              <p>
+                Already have an account?{' '}
+                <a onClick={() => setShowRegister(false)}>Sign in here</a>
+              </p>
+            </div>
+          </section>
+        </form>
+
+        {/* TOGGLE BUTTON */}
+        <div className="auth-toggle">
+          <label className="auth-toggle-label" onClick={() => setShowRegister(!showRegister)}>
+            <ChevronRight size={24} />
+          </label>
         </div>
       </div>
+
+      <style>{`
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }
-
-export default LoginPage;
