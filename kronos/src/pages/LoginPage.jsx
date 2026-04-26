@@ -135,7 +135,7 @@ export function LoginPage() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1 className="auth-title">🚀 Kronos Login</h1>
+        <h1 className="auth-title">  Kronos Login</h1>
         <p className="auth-subtitle">Access your interplanetary wallet</p>
 
         {success && <div className="success-message">{success}</div>}

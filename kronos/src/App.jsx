@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import Sun from "./components/Sun";
 import Planet from "./components/Planet";
@@ -18,6 +18,15 @@ function MainScene() {
   const [creditsInFlight, setCreditsInFlight] = useState(0);
   const [followedPlanet, setFollowedPlanet] = useState(null);
   const planetPositionsRef = useRef({});
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('username');
+    localStorage.removeItem('homePlanet');
+    navigate('/login');
+  };
 
   
 
@@ -104,6 +113,13 @@ function MainScene() {
         <div className="hud-box">
           <strong>Credits in Flight:</strong> {creditsInFlight}
         </div>
+        <button 
+          className="logout-button"
+          onClick={handleLogout}
+          title="Logout"
+        >
+          Logout
+        </button>
       </div>
 
       <FollowPlanetTab 

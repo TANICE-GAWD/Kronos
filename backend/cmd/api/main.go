@@ -119,7 +119,7 @@ func main() {
 	log.Println("✓ WebSocket route registered: /ws")
 
 	
-	fmt.Println("\n🚀 Kronos Backend API Server Starting on :8080")
+	fmt.Println("\n  Kronos Backend API Server Starting on :8080")
 	fmt.Println("   Database: Connected to PostgreSQL")
 	fmt.Println("   Auth: JWT-based authentication enabled")
 	fmt.Println("   Routes: Public (/api/register, /api/login) + Protected + WebSocket")

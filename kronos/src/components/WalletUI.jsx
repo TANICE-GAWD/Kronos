@@ -8,7 +8,7 @@ export default function WalletUI() {
   const [balance, setBalance] = useState(0);
   const [previousBalance, setPreviousBalance] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [changeDirection, setChangeDirection] = useState(null); // 'increase', 'decrease', or null
+  const [changeDirection, setChangeDirection] = useState(null); 
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -17,33 +17,47 @@ export default function WalletUI() {
       return;
     }
 
+    console.log('[WalletUI] Initializing with userId:', userId);
     const manager = WebSocketManager.getInstance();
 
-    // Subscribe to state updates
+    
     const unsubscribe = manager.subscribe((state, changes) => {
+      console.log('[WalletUI] State update received:', {
+        userId,
+        walletsKeys: Object.keys(state.wallets || {}),
+        wallets: state.wallets,
+      });
+      
       setIsConnected(manager.isConnected);
 
-      // Check if this user's wallet exists
+      
       if (state.wallets && state.wallets[userId]) {
         const wallet = state.wallets[userId];
+        console.log('[WalletUI] Found wallet for user:', wallet);
         const newBalance = wallet.available_balance;
 
-        // Update balance with proper state comparison
+        
         setBalance(prevBalance => {
+          console.log('[WalletUI] Balance check:', {
+            newBalance,
+            prevBalance,
+            hasChanged: newBalance !== prevBalance,
+          });
+          
           if (newBalance !== prevBalance) {
             setPreviousBalance(prevBalance);
 
-            // Determine direction of change
+            
             if (newBalance > prevBalance) {
               setChangeDirection('increase');
             } else if (newBalance < prevBalance) {
               setChangeDirection('decrease');
             }
 
-            // Trigger animation
+            
             setIsAnimating(true);
 
-            // Remove animation after duration
+            
             const animationTimer = setTimeout(() => {
               setIsAnimating(false);
               setChangeDirection(null);
@@ -53,10 +67,12 @@ export default function WalletUI() {
           }
           return prevBalance;
         });
+      } else {
+        console.warn('[WalletUI] Wallet not found for userId:', userId, 'Available keys:', Object.keys(state.wallets || {}));
       }
     });
 
-    // Connect WebSocket if not already connected
+    
     if (!manager.isConnected && !manager.ws) {
       console.log('[WalletUI] Connecting to WebSocket...');
       manager.connect('ws://localhost:8080/ws');

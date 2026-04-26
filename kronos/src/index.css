@@ -16,6 +16,9 @@ body,
   left: 14px;
   z-index: 10;
   pointer-events: none;
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .hud-box {
@@ -27,4 +30,29 @@ body,
   font-size: clamp(0.78rem, 1vw, 1rem);
   font-family: "Consolas", "Courier New", monospace;
   box-shadow: 0 0 12px rgba(255, 215, 0, 0.46);
+}
+
+.logout-button {
+  pointer-events: auto;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 100, 100, 0.7);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: clamp(0.78rem, 1vw, 1rem);
+  font-family: "Consolas", "Courier New", monospace;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 12px rgba(255, 100, 100, 0.3);
+}
+
+.logout-button:hover {
+  background: rgba(255, 100, 100, 0.1);
+  border-color: rgba(255, 100, 100, 1);
+  box-shadow: 0 0 20px rgba(255, 100, 100, 0.6);
+  transform: scale(1.05);
+}
+
+.logout-button:active {
+  transform: scale(0.98);
 }
