@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import WebSocketManager from '../services/WebSocketManager';
+import { getCurrencyIdForPlanet } from '../utils/planetCurrency';
 import '../styles/WalletUI.css';
 
 export default function WalletUI() {
   const userId = localStorage.getItem('userId');
   const username = localStorage.getItem('username');
+  const homePlanet = localStorage.getItem('homePlanet');
   const [balance, setBalance] = useState(0);
   const [previousBalance, setPreviousBalance] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -119,7 +121,7 @@ export default function WalletUI() {
           <div className={`balance-amount ${isAnimating ? `animate-${changeDirection}` : ''}`}>
             <span className="currency-symbol">⭐</span>
             <span className="balance-value">{formattedBalance}</span>
-            <span className="currency-code">CREDIT</span>
+            <span className="currency-code">{getCurrencyIdForPlanet(homePlanet)}</span>
           </div>
         </div>
 

@@ -9,6 +9,8 @@ import StarCreditManager from "./components/StarCreditManager";
 import FollowPlanetTab from "./components/FollowPlanetTab";
 import PlanetFollowCamera from "./components/PlanetFollowCamera";
 import WalletUI from "./components/WalletUI";
+import TransferModal from "./components/TransferModal";
+import Notification from "./components/Notification";
 import { Stars, OrbitControls } from "@react-three/drei";
 import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
@@ -18,7 +20,10 @@ function MainScene() {
   const [creditsInFlight, setCreditsInFlight] = useState(0);
   const [followedPlanet, setFollowedPlanet] = useState(null);
   const planetPositionsRef = useRef({});
+  const cameraRef = useRef(null);
   const navigate = useNavigate();
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -43,6 +48,7 @@ function MainScene() {
   ];
 
   const handleCanvasCreated = ({ camera }) => {
+    cameraRef.current = camera;
     camera.far = 100000;
     camera.near = 0.1;
     camera.updateProjectionMatrix();
@@ -114,11 +120,18 @@ function MainScene() {
           <strong>Credits in Flight:</strong> {creditsInFlight}
         </div>
         <button 
+          className="transfer-button"
+          onClick={() => setIsTransferModalOpen(true)}
+          title="Send credits to another user"
+        >
+          💸 Send
+        </button>
+        <button 
           className="logout-button"
           onClick={handleLogout}
           title="Logout"
         >
-          Logout
+             Logout
         </button>
       </div>
 
@@ -129,6 +142,22 @@ function MainScene() {
       />
 
       <WalletUI />
+
+      <TransferModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        onTransferComplete={(transfer) => {
+          setNotification(`   Transaction Launched! Sent ${transfer.amount} CREDIT to ${transfer.recipient} on ${transfer.planet}`);
+        }}
+        planetPositionsRef={planetPositionsRef}
+        cameraRef={cameraRef}
+      />
+
+      <Notification
+        message={notification}
+        type="success"
+        onClose={() => setNotification(null)}
+      />
     </>
   )
 }

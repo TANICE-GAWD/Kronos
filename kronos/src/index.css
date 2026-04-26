@@ -56,3 +56,28 @@ body,
 .logout-button:active {
   transform: scale(0.98);
 }
+
+.transfer-button {
+  pointer-events: auto;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(100, 200, 150, 0.7);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: clamp(0.78rem, 1vw, 1rem);
+  font-family: "Consolas", "Courier New", monospace;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 12px rgba(100, 200, 150, 0.3);
+}
+
+.transfer-button:hover {
+  background: rgba(100, 200, 150, 0.1);
+  border-color: rgba(100, 200, 150, 1);
+  box-shadow: 0 0 20px rgba(100, 200, 150, 0.6);
+  transform: scale(1.05);
+}
+
+.transfer-button:active {
+  transform: scale(0.98);
+}

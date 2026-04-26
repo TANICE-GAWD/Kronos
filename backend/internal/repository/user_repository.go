@@ -16,6 +16,7 @@ type UserRepository interface {
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
 	GetAllUsers(ctx context.Context) ([]*models.User, error)
+	SearchUsersByUsername(ctx context.Context, prefix string, limit int) ([]*models.User, error)
 }
 
 
@@ -91,7 +92,7 @@ func (r *UserRepositoryImpl) GetUserByUsername(ctx context.Context, username str
 	return user, nil
 }
 
-// GetUserByID retrieves a user by their ID
+
 func (r *UserRepositoryImpl) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
 	query := `
 		SELECT id, username, password_hash, home_planet, created_at, updated_at
@@ -119,7 +120,7 @@ func (r *UserRepositoryImpl) GetUserByID(ctx context.Context, userID uuid.UUID) 
 	return user, nil
 }
 
-// GetAllUsers retrieves all users from the database
+
 func (r *UserRepositoryImpl) GetAllUsers(ctx context.Context) ([]*models.User, error) {
 	query := `
 		SELECT id, username, password_hash, home_planet, created_at, updated_at
@@ -130,6 +131,50 @@ func (r *UserRepositoryImpl) GetAllUsers(ctx context.Context) ([]*models.User, e
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query users: %w", err)
+	}
+	defer rows.Close()
+
+	users := []*models.User{}
+	for rows.Next() {
+		user := &models.User{}
+		err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.PasswordHash,
+			&user.HomePlanet,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
+}
+
+
+func (r *UserRepositoryImpl) SearchUsersByUsername(ctx context.Context, prefix string, limit int) ([]*models.User, error) {
+	if limit <= 0 {
+		limit = 5 
+	}
+	
+	query := `
+		SELECT id, username, password_hash, home_planet, created_at, updated_at
+		FROM users
+		WHERE username ILIKE $1
+		ORDER BY username ASC
+		LIMIT $2
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, prefix+"%", limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search users: %w", err)
 	}
 	defer rows.Close()
 

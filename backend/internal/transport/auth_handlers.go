@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"backend/internal/auth"
+	"backend/internal/repository"
 	"github.com/gin-gonic/gin"
 )
 
@@ -113,6 +114,42 @@ func LoginHandler(authService *auth.AuthService) gin.HandlerFunc {
 			"user_id":     user.ID.String(),
 			"username":    user.Username,
 			"home_planet": user.HomePlanet,
+		})
+	}
+}
+
+// SearchHandler allows users to search for other users by username prefix
+func SearchHandler(userRepository repository.UserRepository) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		query := ctx.Query("q")
+
+		if query == "" {
+			ctx.JSON(http.StatusBadRequest, ErrorResponse{
+				Error: "Search query parameter 'q' is required",
+			})
+			return
+		}
+
+		// Search for users (limit to 5 results)
+		users, err := userRepository.SearchUsersByUsername(ctx.Request.Context(), query, 5)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, ErrorResponse{
+				Error: "Search failed: " + err.Error(),
+			})
+			return
+		}
+
+		// Return only username and home_planet for privacy/security
+		results := make([]gin.H, 0)
+		for _, user := range users {
+			results = append(results, gin.H{
+				"username":    user.Username,
+				"home_planet": user.HomePlanet,
+			})
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"results": results,
 		})
 	}
 }

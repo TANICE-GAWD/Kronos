@@ -98,8 +98,9 @@ func main() {
 	{
 		public.POST("/register", transport.RegisterHandler(authService))
 		public.POST("/login", transport.LoginHandler(authService))
+		public.GET("/users/search", transport.SearchHandler(userRepository))
 	}
-	log.Println("✓ Public routes registered: /api/register, /api/login")
+	log.Println("✓ Public routes registered: /api/register, /api/login, /api/users/search")
 
 	
 	protected := r.Group("/api")

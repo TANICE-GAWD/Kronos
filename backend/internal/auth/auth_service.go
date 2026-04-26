@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"backend/internal/models"
@@ -10,6 +11,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
+
+
+func getPlanetCurrencyID(planetName string) string {
+	if len(planetName) < 2 {
+		return "CR" 
+	}
+	return strings.ToUpper(planetName[:2])
+}
 
 
 type AuthService struct {
@@ -65,7 +74,7 @@ func (as *AuthService) Register(ctx context.Context, username, password, homePla
 	
 	wallet := &models.Wallet{
 		UserID:           user.ID,
-		CurrencyID:       "CREDIT", 
+		CurrencyID:       getPlanetCurrencyID(homePlanet), 
 		AvailableBalance: 1000,      
 		LockedBalance:    0,
 		CreatedAt:        now,
