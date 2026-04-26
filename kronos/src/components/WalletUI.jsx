@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Wallet, Wifi, WifiOff, TrendingUp, TrendingDown } from 'lucide-react';
 import WebSocketManager from '../services/WebSocketManager';
 import { getCurrencyIdForPlanet } from '../utils/planetCurrency';
 import '../styles/WalletUI.css';
@@ -103,7 +104,11 @@ export default function WalletUI() {
       <div className="wallet-card">
         {/* Connection Status Indicator */}
         <div className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-          <span className="status-dot"></span>
+          {isConnected ? (
+            <Wifi size={16} className="status-icon" />
+          ) : (
+            <WifiOff size={16} className="status-icon" />
+          )}
           <span className="status-text">
             {isConnected ? 'Connected' : 'Reconnecting...'}
           </span>
@@ -111,7 +116,10 @@ export default function WalletUI() {
 
         {/* Wallet Header */}
         <div className="wallet-header">
-          <h2 className="wallet-title">💰 Wallet</h2>
+          <h2 className="wallet-title">
+            <Wallet size={20} style={{ display: 'inline', marginRight: '8px' }} />
+            Wallet
+          </h2>
           <p className="wallet-username">{username}</p>
         </div>
 
@@ -119,7 +127,7 @@ export default function WalletUI() {
         <div className="balance-section">
           <p className="balance-label">Available Balance</p>
           <div className={`balance-amount ${isAnimating ? `animate-${changeDirection}` : ''}`}>
-            <span className="currency-symbol">⭐</span>
+            <span className="currency-symbol">💰</span>
             <span className="balance-value">{formattedBalance}</span>
             <span className="currency-code">{getCurrencyIdForPlanet(homePlanet)}</span>
           </div>
@@ -128,9 +136,11 @@ export default function WalletUI() {
         {/* Change Indicator */}
         {isAnimating && (
           <div className={`change-indicator ${changeDirection}`}>
-            <span className="change-arrow">
-              {changeDirection === 'increase' ? '📈' : '📉'}
-            </span>
+            {changeDirection === 'increase' ? (
+              <TrendingUp size={16} className="change-icon" />
+            ) : (
+              <TrendingDown size={16} className="change-icon" />
+            )}
             <span className="change-text">
               {changeDirection === 'increase' ? '+' : '-'}
               {formattedChangeAmount}

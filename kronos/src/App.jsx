@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
+import { Send, LogOut } from "lucide-react";
 import Sun from "./components/Sun";
 import Planet from "./components/Planet";
 import BlackHole from "./components/BlackHole";
@@ -124,14 +125,16 @@ function MainScene() {
           onClick={() => setIsTransferModalOpen(true)}
           title="Send credits to another user"
         >
-          💸 Send
+          <Send size={20} style={{ marginRight: '6px' }} />
+          Send
         </button>
         <button 
           className="logout-button"
           onClick={handleLogout}
           title="Logout"
         >
-             Logout
+          <LogOut size={20} style={{ marginRight: '6px' }} />
+          Logout
         </button>
       </div>
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { X, Send, AlertCircle, Loader, Globe } from 'lucide-react';
 import { getCurrencyIdForPlanet } from '../utils/planetCurrency';
 import '../styles/TransferModal.css';
 
@@ -166,13 +167,17 @@ export default function TransferModal({
     <div className="transfer-modal-overlay" onClick={onClose}>
       <div className="transfer-modal" onClick={(e) => e.stopPropagation()}>
         <div className="transfer-modal-header">
-          <h2>   Send Credits</h2>
+          <h2>
+            <Send size={20} style={{ display: 'inline', marginRight: '10px' }} />
+            Send Credits
+          </h2>
           <button
             className="transfer-modal-close"
             onClick={onClose}
             disabled={isLoading}
+            title="Close"
           >
-            ✕
+            <X size={20} />
           </button>
         </div>
 
@@ -190,7 +195,7 @@ export default function TransferModal({
                 disabled={isLoading}
                 autoComplete="off"
               />
-              {isSearching && <span className="search-spinner">⟳</span>}
+              {isSearching && <Loader size={16} className="search-spinner" />}
             </div>
 
             
@@ -204,7 +209,8 @@ export default function TransferModal({
                   >
                     <span className="result-username">{result.username}</span>
                     <span className="result-planet">
-                      🌍 {result.home_planet}
+                      <Globe size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                      {result.home_planet}
                     </span>
                   </div>
                 ))}
@@ -219,7 +225,7 @@ export default function TransferModal({
                 <strong>To:</strong> {selectedRecipient.username}
               </p>
               <p>
-                <strong>Planet:</strong> 🌍 {selectedRecipient.home_planet}
+                <strong>Planet:</strong> <Globe size={14} style={{ display: 'inline', marginRight: '4px' }} /> {selectedRecipient.home_planet}
               </p>
               <p>
                 <strong>Currency:</strong> {getCurrencyIdForPlanet(selectedRecipient.home_planet)}
@@ -244,16 +250,28 @@ export default function TransferModal({
             />
           </div>
 
-          
-          {error && <div className="error-message">⚠️ {error}</div>}
+          {error && (
+            <div className="error-message">
+              <AlertCircle size={16} style={{ display: 'inline', marginRight: '8px' }} />
+              {error}
+            </div>
+          )}
 
-          
           <button
-            type="submit"
             className="send-button"
             disabled={isLoading || !selectedRecipient || !amount}
           >
-            {isLoading ? '   Launching...' : '   Launch Transaction'}
+            {isLoading ? (
+              <>
+                <Loader size={16} className="spin" />
+                Launching...
+              </>
+            ) : (
+              <>
+                <Send size={16} />
+                Launch Transaction
+              </>
+            )}
           </button>
         </form>
       </div>

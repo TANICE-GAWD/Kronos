@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { User, LogIn } from 'lucide-react';
 import '../styles/AuthPages.css';
 
 export function LoginPage() {

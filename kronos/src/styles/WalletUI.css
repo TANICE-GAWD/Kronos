@@ -8,12 +8,12 @@
 }
 
 .wallet-card {
-  background: linear-gradient(135deg, rgba(15, 52, 96, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(25, 40, 65, 0.98) 100%);
   border-radius: 16px;
   padding: 20px;
   width: 300px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 0 0 30px rgba(100, 150, 255, 0.2);
+  border: 1px solid rgba(100, 150, 255, 0.3);
   backdrop-filter: blur(10px);
   color: #fff;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -28,27 +28,24 @@
   margin-bottom: 12px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(100, 150, 255, 0.08);
+  border: 1px solid rgba(100, 150, 255, 0.2);
 }
 
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
+.status-icon {
+  animation: pulse-icon 2s ease-in-out infinite;
 }
 
-.connection-status.connected .status-dot {
-  background-color: #4ade80;
+.connection-status.connected .status-icon {
+  color: #4ade80;
 }
 
-.connection-status.disconnected .status-dot {
-  background-color: #ef4444;
+.connection-status.disconnected .status-icon {
+  color: #ef4444;
   animation: pulse-error 1s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes pulse-icon {
   0%, 100% {
     opacity: 1;
   }
@@ -60,16 +57,14 @@
 @keyframes pulse-error {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
   }
   50% {
     opacity: 0.6;
-    box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
   }
 }
 
 .status-text {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(200, 220, 255, 0.8);
 }
 
 
@@ -82,12 +77,15 @@
   font-size: 18px;
   font-weight: 700;
   margin: 0 0 4px 0;
-  color: #fff;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .wallet-username {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(200, 220, 255, 0.7);
   margin: 0;
   text-transform: capitalize;
 }
@@ -98,12 +96,13 @@
   margin: 16px 0;
   padding: 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(100, 150, 255, 0.08);
+  border: 1px solid rgba(100, 150, 255, 0.15);
 }
 
 .balance-label {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(200, 220, 255, 0.7);
   margin: 0 0 8px 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -205,6 +204,11 @@
 
 .change-arrow {
   font-size: 16px;
+}
+
+.change-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .change-text {
