@@ -97,7 +97,7 @@ func LoginHandler(authService *auth.AuthService) gin.HandlerFunc {
 		req.Username = strings.TrimSpace(req.Username)
 
 		
-		token, err := authService.Login(ctx.Request.Context(), req.Username, req.Password)
+		token, user, err := authService.Login(ctx.Request.Context(), req.Username, req.Password)
 		if err != nil {
 			
 			ctx.JSON(http.StatusUnauthorized, ErrorResponse{
@@ -107,9 +107,12 @@ func LoginHandler(authService *auth.AuthService) gin.HandlerFunc {
 		}
 
 		
-		ctx.JSON(http.StatusOK, TokenResponse{
-			Token:  token,
-			Expiry: "24h",
+		ctx.JSON(http.StatusOK, gin.H{
+			"token":       token,
+			"expiry":      "24h",
+			"user_id":     user.ID.String(),
+			"username":    user.Username,
+			"home_planet": user.HomePlanet,
 		})
 	}
 }

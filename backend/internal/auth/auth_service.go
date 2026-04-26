@@ -80,30 +80,30 @@ func (as *AuthService) Register(ctx context.Context, username, password, homePla
 }
 
 
-func (as *AuthService) Login(ctx context.Context, username, password string) (string, error) {
+func (as *AuthService) Login(ctx context.Context, username, password string) (string, *models.User, error) {
 	
 	if username == "" || password == "" {
-		return "", fmt.Errorf("username and password are required")
+		return "", nil, fmt.Errorf("username and password are required")
 	}
 
 	
 	user, err := as.userRepo.GetUserByUsername(ctx, username)
 	if err != nil {
-		return "", fmt.Errorf("invalid username or password")
+		return "", nil, fmt.Errorf("invalid username or password")
 	}
 
 	
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return "", fmt.Errorf("invalid username or password")
+		return "", nil, fmt.Errorf("invalid username or password")
 	}
 
 	
 	token, err := as.generateToken(user)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate token: %w", err)
+		return "", nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	return token, nil
+	return token, user, nil
 }
 
 

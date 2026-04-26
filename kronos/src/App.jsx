@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import Sun from "./components/Sun";
 import Planet from "./components/Planet";
@@ -7,10 +8,13 @@ import OrbitLine from "./components/OrbitLine";
 import StarCreditManager from "./components/StarCreditManager";
 import FollowPlanetTab from "./components/FollowPlanetTab";
 import PlanetFollowCamera from "./components/PlanetFollowCamera";
+import WalletUI from "./components/WalletUI";
 import { Stars, OrbitControls } from "@react-three/drei";
+import RegisterPage from "./pages/RegisterPage";
+import LoginPage from "./pages/LoginPage";
 import * as THREE from "three";
 
-function App(){
+function MainScene() {
   const [creditsInFlight, setCreditsInFlight] = useState(0);
   const [followedPlanet, setFollowedPlanet] = useState(null);
   const planetPositionsRef = useRef({});
@@ -107,8 +111,58 @@ function App(){
         onPlanetSelect={setFollowedPlanet}
         followedPlanet={followedPlanet}
       />
+
+      <WalletUI />
     </>
   )
+}
+
+
+function ProtectedRoute({ children }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    
+    const token = localStorage.getItem('authToken');
+    setIsAuthenticated(!!token);
+    setIsLoading(false);
+  }, []);
+
+  if (isLoading) {
+    return <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      height: '100vh',
+      background: '#0a0e27',
+      color: 'white',
+      fontSize: '18px'
+    }}>Loading...</div>;
+  }
+
+  return isAuthenticated ? children : <Navigate to="/login" />;
+}
+
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <MainScene />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;
