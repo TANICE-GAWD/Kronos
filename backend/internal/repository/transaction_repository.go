@@ -13,8 +13,8 @@ import (
 
 type TransactionRepository interface {
 	CreateTransaction(ctx context.Context, tx *models.Transaction) error
-	SettleTransaction(ctx context.Context, transactionID, senderID, receiverID uuid.UUID, amount float64, currencyID string) error
-	VoidTransaction(ctx context.Context, transactionID, senderID uuid.UUID, amount float64, currencyID string) error
+	SettleTransaction(ctx context.Context, transactionID, senderWalletID, receiverWalletID uuid.UUID, amount float64, currencyID string) error
+	VoidTransaction(ctx context.Context, transactionID, senderWalletID uuid.UUID, amount float64, currencyID string) error
 	GetTransaction(ctx context.Context, transactionID uuid.UUID) (*models.Transaction, error)
 	GetAllTransactions(ctx context.Context) ([]*models.Transaction, error)
 }
@@ -64,7 +64,7 @@ func (r *TransactionRepositoryImpl) CreateTransaction(ctx context.Context, tx *m
 
 
 
-func (r *TransactionRepositoryImpl) SettleTransaction(ctx context.Context, transactionID, senderID, receiverID uuid.UUID, amount float64, currencyID string) error {
+func (r *TransactionRepositoryImpl) SettleTransaction(ctx context.Context, transactionID, senderWalletID, receiverWalletID uuid.UUID, amount float64, currencyID string) error {
 	
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -77,17 +77,17 @@ func (r *TransactionRepositoryImpl) SettleTransaction(ctx context.Context, trans
 	deductQuery := `
 		UPDATE wallets
 		SET locked_balance = locked_balance - $2
-		WHERE user_id = $1 AND currency_id = $3 AND locked_balance >= $2
+		WHERE id = $1 AND locked_balance >= $2
 	`
-	result, err := tx.ExecContext(ctx, deductQuery, senderID, amount, currencyID)
+	result, err := tx.ExecContext(ctx, deductQuery, senderWalletID, amount)
 	if err != nil {
-		log.Printf("[Settlement] Failed to deduct from sender %s locked balance: %v", senderID, err)
+		log.Printf("[Settlement] Failed to deduct from sender wallet %s locked balance: %v", senderWalletID, err)
 		return fmt.Errorf("failed to deduct from sender: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil || rowsAffected == 0 {
-		log.Printf("[Settlement] Insufficient locked balance for sender %s or wallet not found", senderID)
+		log.Printf("[Settlement] Insufficient locked balance for sender wallet %s or wallet not found", senderWalletID)
 		return fmt.Errorf("insufficient locked balance or wallet not found for sender")
 	}
 
@@ -95,17 +95,17 @@ func (r *TransactionRepositoryImpl) SettleTransaction(ctx context.Context, trans
 	creditQuery := `
 		UPDATE wallets
 		SET available_balance = available_balance + $2
-		WHERE user_id = $1 AND currency_id = $3
+		WHERE id = $1
 	`
-	result, err = tx.ExecContext(ctx, creditQuery, receiverID, amount, currencyID)
+	result, err = tx.ExecContext(ctx, creditQuery, receiverWalletID, amount)
 	if err != nil {
-		log.Printf("[Settlement] Failed to credit receiver %s available balance: %v", receiverID, err)
+		log.Printf("[Settlement] Failed to credit receiver wallet %s available balance: %v", receiverWalletID, err)
 		return fmt.Errorf("failed to credit receiver: %w", err)
 	}
 
 	rowsAffected, err = result.RowsAffected()
 	if err != nil || rowsAffected == 0 {
-		log.Printf("[Settlement] Receiver wallet not found for %s or currency %s", receiverID, currencyID)
+		log.Printf("[Settlement] Receiver wallet not found for wallet_id %s", receiverWalletID)
 		return fmt.Errorf("receiver wallet not found")
 	}
 
@@ -127,13 +127,13 @@ func (r *TransactionRepositoryImpl) SettleTransaction(ctx context.Context, trans
 		return fmt.Errorf("failed to commit settlement: %w", err)
 	}
 
-	log.Printf("[Settlement] ✓ Transaction %s settled: %f %s from %s to %s", transactionID, amount, currencyID, senderID, receiverID)
+	log.Printf("[Settlement] ✓ Transaction %s settled: %f %s from sender_wallet=%s to receiver_wallet=%s", transactionID, amount, currencyID, senderWalletID, receiverWalletID)
 	return nil
 }
 
 
 
-func (r *TransactionRepositoryImpl) VoidTransaction(ctx context.Context, transactionID, senderID uuid.UUID, amount float64, currencyID string) error {
+func (r *TransactionRepositoryImpl) VoidTransaction(ctx context.Context, transactionID, senderWalletID uuid.UUID, amount float64, currencyID string) error {
 	
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -146,17 +146,17 @@ func (r *TransactionRepositoryImpl) VoidTransaction(ctx context.Context, transac
 	deductQuery := `
 		UPDATE wallets
 		SET locked_balance = locked_balance - $2
-		WHERE user_id = $1 AND currency_id = $3 AND locked_balance >= $2
+		WHERE id = $1 AND locked_balance >= $2
 	`
-	result, err := tx.ExecContext(ctx, deductQuery, senderID, amount, currencyID)
+	result, err := tx.ExecContext(ctx, deductQuery, senderWalletID, amount)
 	if err != nil {
-		log.Printf("[Void] Failed to deduct from sender %s locked balance: %v", senderID, err)
+		log.Printf("[Void] Failed to deduct from sender wallet %s locked balance: %v", senderWalletID, err)
 		return fmt.Errorf("failed to deduct from locked balance: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil || rowsAffected == 0 {
-		log.Printf("[Void] Insufficient locked balance for sender %s", senderID)
+		log.Printf("[Void] Insufficient locked balance for sender wallet %s", senderWalletID)
 		return fmt.Errorf("insufficient locked balance or wallet not found")
 	}
 
@@ -164,17 +164,17 @@ func (r *TransactionRepositoryImpl) VoidTransaction(ctx context.Context, transac
 	creditQuery := `
 		UPDATE wallets
 		SET available_balance = available_balance + $2
-		WHERE user_id = $1 AND currency_id = $3
+		WHERE id = $1
 	`
-	result, err = tx.ExecContext(ctx, creditQuery, senderID, amount, currencyID)
+	result, err = tx.ExecContext(ctx, creditQuery, senderWalletID, amount)
 	if err != nil {
-		log.Printf("[Void] Failed to credit sender %s available balance: %v", senderID, err)
+		log.Printf("[Void] Failed to credit sender wallet %s available balance: %v", senderWalletID, err)
 		return fmt.Errorf("failed to credit sender: %w", err)
 	}
 
 	rowsAffected, err = result.RowsAffected()
 	if err != nil || rowsAffected == 0 {
-		log.Printf("[Void] Sender wallet not found for %s", senderID)
+		log.Printf("[Void] Sender wallet not found for wallet_id %s", senderWalletID)
 		return fmt.Errorf("sender wallet not found")
 	}
 
@@ -196,7 +196,7 @@ func (r *TransactionRepositoryImpl) VoidTransaction(ctx context.Context, transac
 		return fmt.Errorf("failed to commit void: %w", err)
 	}
 
-	log.Printf("[Void] ✓ Transaction %s voided: %f %s refunded to %s", transactionID, amount, currencyID, senderID)
+	log.Printf("[Void] ✓ Transaction %s voided: %f %s refunded to sender_wallet=%s", transactionID, amount, currencyID, senderWalletID)
 	return nil
 }
 

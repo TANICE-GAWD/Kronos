@@ -149,11 +149,11 @@ function MainScene() {
         isOpen={isTransferModalOpen}
         onClose={() => setIsTransferModalOpen(false)}
         onTransferComplete={(transfer) => {
-          setNotification(`   Transaction Launched! Sent ${transfer.amount} CREDIT to ${transfer.recipient} on ${transfer.planet}`);
+          setNotification(` Transaction Launched! Sent ${transfer.amount} CREDIT to ${transfer.recipient} on ${transfer.planet}`);
         }}
         planetPositionsRef={planetPositionsRef}
         cameraRef={cameraRef}
-      />
+      />Launched
 
       <Notification
         message={notification}

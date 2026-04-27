@@ -31,6 +31,8 @@ const (
 type Payload struct {
 	Amount     float64 `json:"amount"`
 	CurrencyID string  `json:"currency_id"`
+	SenderWalletID   uuid.UUID `json:"sender_wallet_id"`
+	ReceiverWalletID uuid.UUID `json:"receiver_wallet_id"`
 }
 
 type StateUpdate struct {

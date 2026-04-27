@@ -131,8 +131,8 @@ func (s *Scheduler) settleTransaction(p *packet.Packet) error {
 	err := s.transactionRepo.SettleTransaction(
 		ctx,
 		p.ID,
-		p.SenderID,
-		p.ReceiverID,
+		p.Payload.SenderWalletID,
+		p.Payload.ReceiverWalletID,
 		p.Payload.Amount,
 		p.Payload.CurrencyID,
 	)
@@ -170,7 +170,7 @@ func (s *Scheduler) voidTransaction(p *packet.Packet) error {
 	err := s.transactionRepo.VoidTransaction(
 		ctx,
 		p.ID,
-		p.SenderID,
+		p.Payload.SenderWalletID,
 		p.Payload.Amount,
 		p.Payload.CurrencyID,
 	)

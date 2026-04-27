@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"backend/internal/models"
 	"github.com/google/uuid"
@@ -29,8 +30,22 @@ func NewWalletRepository(db *sql.DB) WalletRepository {
 	return &WalletRepositoryImpl{db: db}
 }
 
+func normalizeCurrencyID(currencyID string) string {
+	return strings.ToUpper(strings.TrimSpace(currencyID))
+}
+
 
 func (r *WalletRepositoryImpl) CreateWallet(ctx context.Context, wallet *models.Wallet) error {
+	wallet.CurrencyID = normalizeCurrencyID(wallet.CurrencyID)
+
+	existingWallet, existingErr := r.GetWalletByUserIDAndCurrency(ctx, wallet.UserID, wallet.CurrencyID)
+	if existingErr == nil && existingWallet != nil {
+		wallet.ID = existingWallet.ID
+		wallet.CreatedAt = existingWallet.CreatedAt
+		wallet.UpdatedAt = existingWallet.UpdatedAt
+		return nil
+	}
+
 	
 	if wallet.ID == uuid.Nil {
 		wallet.ID = uuid.New()
@@ -67,10 +82,14 @@ func (r *WalletRepositoryImpl) CreateWallet(ctx context.Context, wallet *models.
 
 
 func (r *WalletRepositoryImpl) GetWalletByUserIDAndCurrency(ctx context.Context, userID uuid.UUID, currencyID string) (*models.Wallet, error) {
+	currencyID = normalizeCurrencyID(currencyID)
+
 	query := `
 		SELECT id, user_id, currency_id, available_balance, locked_balance, created_at, updated_at
 		FROM wallets
-		WHERE user_id = $1 AND currency_id = $2
+		WHERE user_id = $1 AND UPPER(TRIM(currency_id)) = $2
+		ORDER BY created_at ASC
+		LIMIT 1
 	`
 
 	wallet := &models.Wallet{}
