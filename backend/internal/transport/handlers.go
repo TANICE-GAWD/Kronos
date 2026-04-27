@@ -21,6 +21,14 @@ const(
 	SpeedOfLight float64 = 50.0
 )
 
+func planetCurrencyID(planetName string) string {
+	planetName = strings.TrimSpace(planetName)
+	if len(planetName) < 2 {
+		return "CR"
+	}
+	return strings.ToUpper(planetName[:2])
+}
+
 
 type TransferRequest struct {
 	ReceiverUsername  string  `json:"receiver_username" binding:"required,min=1"`
@@ -78,6 +86,7 @@ func TransferHandler(
 		receiverID := receiver.ID
 		receiverHomePlanet := receiver.HomePlanet
 		effectiveCurrencyID := strings.ToUpper(strings.TrimSpace(req.CurrencyID))
+		receiverCurrencyID := planetCurrencyID(receiverHomePlanet)
 
 		
 		if senderID == receiverID {
@@ -136,11 +145,11 @@ func TransferHandler(
 			log.Printf("[Transfer] Fallback currency selected for sender %s: %s", senderID, effectiveCurrencyID)
 		}
 
-		receiverWallet, err := walletRepo.GetWalletByUserIDAndCurrency(ctx, receiverID, effectiveCurrencyID)
+		receiverWallet, err := walletRepo.GetWalletByUserIDAndCurrency(ctx, receiverID, receiverCurrencyID)
 		if err != nil || receiverWallet == nil {
 			receiverWallet = &models.Wallet{
 				UserID:           receiverID,
-				CurrencyID:       effectiveCurrencyID,
+				CurrencyID:       receiverCurrencyID,
 				AvailableBalance: 0,
 				LockedBalance:    0,
 				CreatedAt:        now,
@@ -149,7 +158,7 @@ func TransferHandler(
 
 			createErr := walletRepo.CreateWallet(ctx, receiverWallet)
 			if createErr != nil {
-				refetch, fetchErr := walletRepo.GetWalletByUserIDAndCurrency(ctx, receiverID, effectiveCurrencyID)
+				refetch, fetchErr := walletRepo.GetWalletByUserIDAndCurrency(ctx, receiverID, receiverCurrencyID)
 				if fetchErr != nil || refetch == nil {
 					ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to prepare receiver wallet"})
 					return
@@ -210,7 +219,9 @@ func TransferHandler(
 			CurrentPos:        originPos,
 			Payload: packet.Payload{
 				Amount:     req.Amount,
-				CurrencyID: effectiveCurrencyID,
+				CurrencyID: receiverCurrencyID,
+				SenderWalletID: senderWallet.ID,
+				ReceiverWalletID: receiverWallet.ID,
 			},
 			LaunchTime:     now,
 			Status:         packet.Active,
@@ -233,7 +244,7 @@ func TransferHandler(
 				"planet": receiverHomePlanet,
 			},
 			"amount":    req.Amount,
-			"currency":  effectiveCurrencyID,
+			"currency":  receiverCurrencyID,
 		})
 	}
 }

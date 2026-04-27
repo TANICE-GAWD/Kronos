@@ -6,7 +6,17 @@ import(
 	"backend/internal/repository"
 	"github.com/google/uuid"
 	"log"
+	"strings"
+	"time"
 )
+
+func planetCurrencyIDForHub(planetName string) string {
+	planetName = strings.TrimSpace(planetName)
+	if len(planetName) < 2 {
+		return "CR"
+	}
+	return strings.ToUpper(planetName[:2])
+}
 
 type Hub struct{
 	register chan *Client
@@ -42,7 +52,7 @@ func (h *Hub) Run(){
 				delete(h.clients, client)
 			}
 		case stateSnapshot := <-h.broadcast:
-			// Enrich state with wallet, transaction, and user data
+			
 			enrichedState := h.EnrichState(stateSnapshot)
 			
 			for client := range h.clients {
@@ -62,19 +72,46 @@ func (h *Hub) Broadcast(state packet.StateUpdate) {
 	h.broadcast <- state
 }
 
-// EnrichState fetches and adds wallet, transaction, and user data to the state update
+
 func (h *Hub) EnrichState(state packet.StateUpdate) packet.StateUpdate {
 	ctx := context.Background()
+
+	userPlanetCurrency := make(map[string]string)
+	usersMap := make(map[uuid.UUID]map[string]interface{})
+
 	
-	// Fetch all wallets
+	users, err := h.userRepo.GetAllUsers(ctx)
+	if err != nil {
+		log.Printf("[Hub] Error fetching users: %v", err)
+	} else {
+		for _, u := range users {
+			userPlanetCurrency[u.ID.String()] = planetCurrencyIDForHub(u.HomePlanet)
+			usersMap[u.ID] = map[string]interface{}{
+				"id":          u.ID.String(),
+				"username":    u.Username,
+				"home_planet": u.HomePlanet,
+				"created_at":  u.CreatedAt,
+				"updated_at":  u.UpdatedAt,
+			}
+		}
+		state.Users = usersMap
+	}
+	
+	
 	wallets, err := h.walletRepo.GetAllWallets(ctx)
 	if err != nil {
 		log.Printf("[Hub] Error fetching wallets: %v", err)
 	} else {
+		selectedWalletByUser := make(map[string]interface{})
+		selectedWalletMeta := make(map[string]struct {
+			currencyID string
+			updatedAt  time.Time
+		})
+
 		walletsMap := make(map[string]interface{})
 		for _, w := range wallets {
 			userKey := w.UserID.String()
-			walletsMap[userKey] = map[string]interface{}{
+			walletData := map[string]interface{}{
 				"id":                w.ID.String(),
 				"user_id":           w.UserID.String(),
 				"currency_id":       w.CurrencyID,
@@ -83,11 +120,53 @@ func (h *Hub) EnrichState(state packet.StateUpdate) packet.StateUpdate {
 				"created_at":        w.CreatedAt,
 				"updated_at":        w.UpdatedAt,
 			}
+
+			preferredCurrency := userPlanetCurrency[userKey]
+			current, exists := selectedWalletMeta[userKey]
+			if !exists {
+				selectedWalletByUser[userKey] = walletData
+				selectedWalletMeta[userKey] = struct {
+					currencyID string
+					updatedAt  time.Time
+				}{
+					currencyID: strings.ToUpper(strings.TrimSpace(w.CurrencyID)),
+					updatedAt:  w.UpdatedAt,
+				}
+				continue
+			}
+
+			candidateCurrency := strings.ToUpper(strings.TrimSpace(w.CurrencyID))
+			currentPreferred := current.currencyID == preferredCurrency
+			candidatePreferred := candidateCurrency == preferredCurrency
+
+			chooseCandidate := false
+			if candidatePreferred && !currentPreferred {
+				chooseCandidate = true
+			} else if candidatePreferred == currentPreferred {
+				if w.UpdatedAt.After(current.updatedAt) {
+					chooseCandidate = true
+				}
+			}
+
+			if chooseCandidate {
+				selectedWalletByUser[userKey] = walletData
+				selectedWalletMeta[userKey] = struct {
+					currencyID string
+					updatedAt  time.Time
+				}{
+					currencyID: candidateCurrency,
+					updatedAt:  w.UpdatedAt,
+				}
+			}
+		}
+
+		for userKey, walletData := range selectedWalletByUser {
+			walletsMap[userKey] = walletData
 		}
 		state.Wallets = walletsMap
 	}
 	
-	// Fetch all transactions
+	
 	transactions, err := h.transactionRepo.GetAllTransactions(ctx)
 	if err != nil {
 		log.Printf("[Hub] Error fetching transactions: %v", err)
@@ -107,24 +186,6 @@ func (h *Hub) EnrichState(state packet.StateUpdate) packet.StateUpdate {
 			})
 		}
 		state.Transactions = txList
-	}
-	
-	// Fetch all users
-	users, err := h.userRepo.GetAllUsers(ctx)
-	if err != nil {
-		log.Printf("[Hub] Error fetching users: %v", err)
-	} else {
-		usersMap := make(map[uuid.UUID]map[string]interface{})
-		for _, u := range users {
-			usersMap[u.ID] = map[string]interface{}{
-				"id":          u.ID.String(),
-				"username":    u.Username,
-				"home_planet": u.HomePlanet,
-				"created_at":  u.CreatedAt,
-				"updated_at":  u.UpdatedAt,
-			}
-		}
-		state.Users = usersMap
 	}
 	
 	return state
