@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { User, Lock, Globe, Loader, LogIn, UserPlus, ChevronRight } from 'lucide-react';
+import { User, Lock, Globe, Loader, LogIn, UserPlus, ArrowLeft } from 'lucide-react';
 import '../styles/AuthPages.css';
 
 export function LoginPage() {
@@ -402,8 +402,12 @@ export function LoginPage() {
 
         {/* TOGGLE BUTTON */}
         <div className="auth-toggle">
+          <h6>
+            <span className={!showRegister ? 'active' : ''}>Login</span>
+            <span className={showRegister ? 'active' : ''}>Signup</span>
+          </h6>
           <label className="auth-toggle-label" onClick={() => setShowRegister(!showRegister)}>
-            <ChevronRight size={24} />
+            <ArrowLeft size={14} />
           </label>
         </div>
       </div>

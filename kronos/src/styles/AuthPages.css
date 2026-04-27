@@ -321,11 +321,33 @@
 /* Toggle Section */
 .auth-toggle {
   position: absolute;
-  top: 50%;
+  top: -78px;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   z-index: 15;
-  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-toggle h6 {
+  margin: 0;
+  display: flex;
+  gap: 32px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.auth-toggle h6 span {
+  opacity: 0.55;
+  transition: opacity 0.25s ease;
+}
+
+.auth-toggle h6 span.active {
+  opacity: 1;
 }
 
 .auth-toggle-label {
@@ -334,25 +356,29 @@
   text-align: center;
   width: 60px;
   height: 16px;
-  border-radius: 8px;
+  border-radius: 999px;
   background-color: var(--login-icon-color);
   cursor: pointer;
-  pointer-events: all;
+  border: none;
   transition: all 0.3s ease;
 }
 
 .auth-toggle-label svg {
-  width: 36px;
-  height: 36px;
-  display: block;
-  position: relative;
-  top: -11px;
-  left: 12px;
-  transition: all 0.5s ease;
+  position: absolute;
+  top: -3px;
+  left: -1px;
+  width: 22px;
+  height: 22px;
+  padding: 2px;
+  border-radius: 50%;
+  background: #102770;
+  color: #ffeba7;
+  transition: all 0.35s ease;
 }
 
 .auth-card.show-register .auth-toggle-label svg {
-  transform: translateX(30px) rotate(360deg);
+  left: 39px;
+  transform: rotate(180deg);
 }
 
 .auth-toggle-label:hover {

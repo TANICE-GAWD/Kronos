@@ -77,6 +77,7 @@ func TransferHandler(
 
 		receiverID := receiver.ID
 		receiverHomePlanet := receiver.HomePlanet
+		effectiveCurrencyID := strings.ToUpper(strings.TrimSpace(req.CurrencyID))
 
 		
 		if senderID == receiverID {
@@ -87,12 +88,6 @@ func TransferHandler(
 		log.Printf("[Transfer] Receiver %s is from planet %s", receiverID, receiverHomePlanet)
 
 		
-		receiverWallet, err := walletRepo.GetWalletByUserIDAndCurrency(ctx, receiverID, req.CurrencyID)
-		if err != nil || receiverWallet == nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "receiver does not have a wallet for this currency"})
-			return
-		}
-
 		
 		now := time.Now()
 		originPos, ok := engine.GetPlanetPosition(senderHomePlanet, now)
@@ -108,10 +103,59 @@ func TransferHandler(
 		}
 
 		
-		senderWallet, err := walletRepo.GetWalletByUserIDAndCurrency(ctx, senderID, req.CurrencyID)
+		senderWallet, err := walletRepo.GetWalletByUserIDAndCurrency(ctx, senderID, effectiveCurrencyID)
 		if err != nil || senderWallet == nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "sender does not have a wallet for this currency"})
-			return
+			allWallets, listErr := walletRepo.GetAllWallets(ctx)
+			if listErr != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve sender wallet"})
+				return
+			}
+
+			for _, w := range allWallets {
+				if w.UserID == senderID && w.AvailableBalance >= req.Amount {
+					senderWallet = w
+					break
+				}
+			}
+
+			if senderWallet == nil {
+				for _, w := range allWallets {
+					if w.UserID == senderID {
+						senderWallet = w
+						break
+					}
+				}
+			}
+
+			if senderWallet == nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "sender does not have any wallet"})
+				return
+			}
+
+			effectiveCurrencyID = senderWallet.CurrencyID
+			log.Printf("[Transfer] Fallback currency selected for sender %s: %s", senderID, effectiveCurrencyID)
+		}
+
+		receiverWallet, err := walletRepo.GetWalletByUserIDAndCurrency(ctx, receiverID, effectiveCurrencyID)
+		if err != nil || receiverWallet == nil {
+			receiverWallet = &models.Wallet{
+				UserID:           receiverID,
+				CurrencyID:       effectiveCurrencyID,
+				AvailableBalance: 0,
+				LockedBalance:    0,
+				CreatedAt:        now,
+				UpdatedAt:        now,
+			}
+
+			createErr := walletRepo.CreateWallet(ctx, receiverWallet)
+			if createErr != nil {
+				refetch, fetchErr := walletRepo.GetWalletByUserIDAndCurrency(ctx, receiverID, effectiveCurrencyID)
+				if fetchErr != nil || refetch == nil {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to prepare receiver wallet"})
+					return
+				}
+				receiverWallet = refetch
+			}
 		}
 
 		if senderWallet.AvailableBalance < req.Amount {
@@ -119,7 +163,7 @@ func TransferHandler(
 			return
 		}
 
-		log.Printf("[Transfer] Sender has sufficient balance: %f %s available", senderWallet.AvailableBalance, req.CurrencyID)
+		log.Printf("[Transfer] Sender has sufficient balance: %f %s available", senderWallet.AvailableBalance, effectiveCurrencyID)
 
 		
 		txID := uuid.New()
@@ -129,7 +173,7 @@ func TransferHandler(
 			return
 		}
 
-		log.Printf("[Transfer] Funds locked in database: %f %s from wallet %s", req.Amount, req.CurrencyID, senderWallet.ID)
+		log.Printf("[Transfer] Funds locked in database: %f %s from wallet %s", req.Amount, effectiveCurrencyID, senderWallet.ID)
 
 		
 		transaction := &models.Transaction{
@@ -166,7 +210,7 @@ func TransferHandler(
 			CurrentPos:        originPos,
 			Payload: packet.Payload{
 				Amount:     req.Amount,
-				CurrencyID: req.CurrencyID,
+				CurrencyID: effectiveCurrencyID,
 			},
 			LaunchTime:     now,
 			Status:         packet.Active,
@@ -189,7 +233,7 @@ func TransferHandler(
 				"planet": receiverHomePlanet,
 			},
 			"amount":    req.Amount,
-			"currency":  req.CurrencyID,
+			"currency":  effectiveCurrencyID,
 		})
 	}
 }
