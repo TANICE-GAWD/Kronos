@@ -16,7 +16,6 @@ export function LoginPage() {
   const [registerData, setRegisterData] = useState({
     username: '',
     password: '',
-    confirmPassword: '',
     homePlanet: 'Earth',
   });
   
@@ -122,10 +121,8 @@ export function LoginPage() {
       return;
     }
 
-    if (registerData.password !== registerData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+
+
 
     setLoading(true);
 
@@ -156,7 +153,7 @@ export function LoginPage() {
         setRegisterData({
           username: '',
           password: '',
-          confirmPassword: '',
+          
           homePlanet: 'Earth',
         });
         setLoginData({
@@ -356,21 +353,7 @@ export function LoginPage() {
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="register-confirm">
-                <Lock size={14} style={{ display: 'inline', marginRight: '6px' }} />
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                id="register-confirm"
-                name="confirmPassword"
-                value={registerData.confirmPassword}
-                onChange={handleRegisterChange}
-                placeholder="Confirm your password"
-                disabled={loading}
-              />
-            </div>
+
 
             <div className="form-group">
               <label htmlFor="register-planet">
