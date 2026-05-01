@@ -599,7 +599,7 @@ export default function StarCreditManager({ setTotalCredits }) {
     isConnectingRef.current = true;
 
     try {
-      const ws = new WebSocket("ws://localhost:8080/ws");
+      const ws = new WebSocket("wss://kronos-production-c81f.up.railway.app/ws");
       wsRef.current = ws;
 
       ws.onopen = () => {

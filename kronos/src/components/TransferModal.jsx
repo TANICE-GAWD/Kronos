@@ -32,7 +32,7 @@ export default function TransferModal({
     setIsSearching(true);
     try {
       const response = await fetch(
-        `http://localhost:8080/api/users/search?q=${encodeURIComponent(query)}`,
+        `https://kronos-production-c81f.up.railway.app/api/users/search?q=${encodeURIComponent(query)}`,
         {
           method: 'GET',
           headers: {
@@ -121,7 +121,7 @@ export default function TransferModal({
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/transfer', {
+      const response = await fetch('https://kronos-production-c81f.up.railway.app/api/transfer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

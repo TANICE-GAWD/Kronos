@@ -262,7 +262,7 @@ export function InitializeWebSocket() {
   const manager = WebSocketManager.getInstance();
 
   // Connect once on app startup
-  manager.connect('ws://localhost:8080/ws');
+  manager.connect('wss://kronos-production-c81f.up.railway.app/ws');
 
   // Subscribe to all updates
   const unsubscribe = manager.subscribe((state, changes) => {

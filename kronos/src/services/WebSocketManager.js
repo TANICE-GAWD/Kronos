@@ -11,7 +11,7 @@
  * Usage:
  *   const manager = WebSocketManager.getInstance();
  *   manager.subscribe((state) => console.log(state));
- *   manager.connect('ws://localhost:8080/ws');
+ *   manager.connect('wss://kronos-production-c81f.up.railway.app/ws');
  */
 
 class WebSocketManager {
@@ -52,7 +52,7 @@ class WebSocketManager {
 
   /**
    * Connect to the WebSocket server
-   * @param {string} url - WebSocket URL (e.g., 'ws://localhost:8080/ws')
+  * @param {string} url - WebSocket URL (e.g., 'wss://kronos-production-c81f.up.railway.app/ws')
    */
   connect(url) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {

@@ -16,7 +16,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import WebSocketManager from './WebSocketManager';
 
-export function useWebSocket(autoConnect = true, wsUrl = 'ws://localhost:8080/ws') {
+export function useWebSocket(autoConnect = true, wsUrl = 'wss://kronos-production-c81f.up.railway.app/ws') {
   const [state, setState] = useState(null);
   const [changes, setChanges] = useState(null);
   const [isConnected, setIsConnected] = useState(false);

@@ -78,7 +78,7 @@ export default function WalletUI() {
     
     if (!manager.isConnected && !manager.ws) {
       console.log('[WalletUI] Connecting to WebSocket...');
-      manager.connect('ws://localhost:8080/ws');
+      manager.connect('wss://kronos-production-c81f.up.railway.app/ws');
     }
 
     return unsubscribe;
