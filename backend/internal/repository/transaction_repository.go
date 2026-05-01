@@ -17,6 +17,10 @@ type TransactionRepository interface {
 	VoidTransaction(ctx context.Context, transactionID, senderWalletID uuid.UUID, amount float64, currencyID string) error
 	GetTransaction(ctx context.Context, transactionID uuid.UUID) (*models.Transaction, error)
 	GetAllTransactions(ctx context.Context) ([]*models.Transaction, error)
+	// NEW: Procedure-based atomic transfers
+	InitiateTransferWithProcedure(ctx context.Context, senderID, receiverID uuid.UUID, amount float64, currencyID, originPlanet, destPlanet string) (uuid.UUID, error)
+	SettleTransactionWithProcedure(ctx context.Context, transactionID uuid.UUID) (bool, error)
+	VoidTransactionWithProcedure(ctx context.Context, transactionID uuid.UUID) (bool, error)
 }
 
 
@@ -270,4 +274,56 @@ func (r *TransactionRepositoryImpl) GetAllTransactions(ctx context.Context) ([]*
 	}
 
 	return transactions, nil
+}
+
+// InitiateTransferWithProcedure creates an atomic, audited transfer using stored procedure
+func (r *TransactionRepositoryImpl) InitiateTransferWithProcedure(ctx context.Context, senderID, receiverID uuid.UUID, amount float64, currencyID, originPlanet, destPlanet string) (uuid.UUID, error) {
+	var txID uuid.UUID
+	err := r.db.QueryRowContext(ctx, `
+		SELECT sp_transfer_funds($1, $2, $3, $4, $5, $6)
+	`, senderID, receiverID, amount, currencyID, originPlanet, destPlanet).Scan(&txID)
+
+	if err != nil {
+		log.Printf("[InitiateTransfer] Procedure failed: %v", err)
+		return uuid.Nil, fmt.Errorf("transfer failed: %w", err)
+	}
+
+	log.Printf("[InitiateTransfer] ✓ Transfer initiated via procedure: %s from %s to %s, amount: %f %s", txID, senderID, receiverID, amount, currencyID)
+	return txID, nil
+}
+
+// SettleTransactionWithProcedure settles a pending transaction using stored procedure
+func (r *TransactionRepositoryImpl) SettleTransactionWithProcedure(ctx context.Context, transactionID uuid.UUID) (bool, error) {
+	var settled bool
+	err := r.db.QueryRowContext(ctx, "SELECT sp_settle_transaction($1)", transactionID).Scan(&settled)
+
+	if err != nil {
+		log.Printf("[SettleTransactionProc] Procedure failed for tx %s: %v", transactionID, err)
+		return false, fmt.Errorf("settle failed: %w", err)
+	}
+
+	if settled {
+		log.Printf("[SettleTransactionProc] ✓ Transaction %s settled via procedure", transactionID)
+	} else {
+		log.Printf("[SettleTransactionProc] Transaction %s already settled or not pending", transactionID)
+	}
+	return settled, nil
+}
+
+// VoidTransactionWithProcedure refunds a pending transaction using stored procedure
+func (r *TransactionRepositoryImpl) VoidTransactionWithProcedure(ctx context.Context, transactionID uuid.UUID) (bool, error) {
+	var voided bool
+	err := r.db.QueryRowContext(ctx, "SELECT sp_void_transaction($1)", transactionID).Scan(&voided)
+
+	if err != nil {
+		log.Printf("[VoidTransactionProc] Procedure failed for tx %s: %v", transactionID, err)
+		return false, fmt.Errorf("void failed: %w", err)
+	}
+
+	if voided {
+		log.Printf("[VoidTransactionProc] ✓ Transaction %s voided via procedure", transactionID)
+	} else {
+		log.Printf("[VoidTransactionProc] Transaction %s already voided or not pending", transactionID)
+	}
+	return voided, nil
 }

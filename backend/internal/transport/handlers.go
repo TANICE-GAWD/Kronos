@@ -289,3 +289,101 @@ func HistoryHandler(ledger *finance.Ledger) gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, history)
 	}
 }
+
+// GetUserWealthHandler returns user's wealth summary across all currencies
+func GetUserWealthHandler(walletRepo repository.WalletRepository) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userIDStr, ok := GetUserID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing user ID"})
+			return
+		}
+
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID format"})
+			return
+		}
+
+		log.Printf("[GetWealth] Retrieving wealth summary for user %s", userID)
+
+		summaries, err := walletRepo.GetUserWealthSummary(ctx, userID)
+		if err != nil {
+			log.Printf("[GetWealth] Error: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve wealth summary"})
+			return
+		}
+
+		if len(summaries) == 0 {
+			ctx.JSON(http.StatusOK, gin.H{
+				"user_id":    userID,
+				"currencies": []interface{}{},
+				"total":      0.0,
+			})
+			return
+		}
+
+		// Calculate total wealth
+		var totalWealth float64
+		for _, summary := range summaries {
+			totalWealth += summary.TotalBalance
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"user_id":    userID,
+			"currencies": summaries,
+			"total":      totalWealth,
+		})
+	}
+}
+
+// GetUserWalletsDetailedHandler returns user's wallets with detailed currency information
+func GetUserWalletsDetailedHandler(walletRepo repository.WalletRepository) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userIDStr, ok := GetUserID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing user ID"})
+			return
+		}
+
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID format"})
+			return
+		}
+
+		log.Printf("[GetWalletsDetailed] Retrieving detailed wallets for user %s", userID)
+
+		walletInfos, err := walletRepo.GetUserWalletsWithCurrencyInfo(ctx, userID)
+		if err != nil {
+			log.Printf("[GetWalletsDetailed] Error: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve wallet information"})
+			return
+		}
+
+		if len(walletInfos) == 0 {
+			ctx.JSON(http.StatusOK, gin.H{
+				"user_id":  userID,
+				"wallets":  []interface{}{},
+				"total":    0.0,
+				"currency_count": 0,
+			})
+			return
+		}
+
+		// Calculate total wealth and count unique currencies
+		var totalWealth float64
+		currencyMap := make(map[string]bool)
+		for _, wallet := range walletInfos {
+			totalWealth += wallet.TotalBalance
+			currencyMap[wallet.CurrencyID] = true
+		}
+
+		ctx.JSON(http.StatusOK, gin.H{
+			"user_id":          userID,
+			"wallets":          walletInfos,
+			"total":            totalWealth,
+			"currency_count":   len(currencyMap),
+		})
+	}
+}

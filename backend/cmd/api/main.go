@@ -109,8 +109,11 @@ func main() {
 		protected.POST("/transfer", transport.TransferHandler(scheduler, ledger, userRepository, walletRepository, transactionRepository))
 		protected.GET("/balance/:userID", transport.BalanceHandler(ledger))
 		protected.GET("/history/:userID", transport.HistoryHandler(ledger))
+		// NEW: Wealth and wallet endpoints from enhanced database schema
+		protected.GET("/user/me/wealth", transport.GetUserWealthHandler(walletRepository))
+		protected.GET("/user/me/wallets-detailed", transport.GetUserWalletsDetailedHandler(walletRepository))
 	}
-	log.Println("✓ Protected routes registered: /api/transfer, /api/balance, /api/history")
+	log.Println("✓ Protected routes registered: /api/transfer, /api/balance, /api/history, /api/user/me/wealth, /api/user/me/wallets-detailed")
 
 	
 	r.GET("/ws", func(ctx *gin.Context) {

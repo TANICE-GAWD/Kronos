@@ -11,6 +11,26 @@ import (
 	"github.com/google/uuid"
 )
 
+// WealthSummary represents aggregated wealth across currencies
+type WealthSummary struct {
+	CurrencyID       string
+	CurrencyName     string
+	AvailableBalance float64
+	LockedBalance    float64
+	TotalBalance     float64
+}
+
+// WalletWithCurrencyInfo represents a wallet with detailed currency information
+type WalletWithCurrencyInfo struct {
+	WalletID         uuid.UUID
+	CurrencyID       string
+	CurrencyName     string
+	AvailableBalance float64
+	LockedBalance    float64
+	TotalBalance     float64
+	CreatedAt        string
+}
+
 
 type WalletRepository interface {
 	CreateWallet(ctx context.Context, wallet *models.Wallet) error
@@ -18,6 +38,9 @@ type WalletRepository interface {
 	UpdateWalletBalance(ctx context.Context, walletID uuid.UUID, availableBalance, lockedBalance float64) error
 	LockFundsInWallet(ctx context.Context, walletID uuid.UUID, amount float64) error
 	GetAllWallets(ctx context.Context) ([]*models.Wallet, error)
+	// NEW: Wealth summary and detailed wallet queries
+	GetUserWealthSummary(ctx context.Context, userID uuid.UUID) ([]WealthSummary, error)
+	GetUserWalletsWithCurrencyInfo(ctx context.Context, userID uuid.UUID) ([]WalletWithCurrencyInfo, error)
 }
 
 
@@ -198,4 +221,96 @@ func (r *WalletRepositoryImpl) GetAllWallets(ctx context.Context) ([]*models.Wal
 	}
 
 	return wallets, nil
+}
+
+// GetUserWealthSummary retrieves user's total wealth breakdown by currency using stored procedure
+func (r *WalletRepositoryImpl) GetUserWealthSummary(ctx context.Context, userID uuid.UUID) ([]WealthSummary, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT currency_id, currency_name, available_balance, locked_balance, total_balance
+		FROM sp_get_user_wealth_summary($1)
+	`, userID)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to query wealth summary: %w", err)
+	}
+	defer rows.Close()
+
+	var summaries []WealthSummary
+	for rows.Next() {
+		var summary WealthSummary
+		err := rows.Scan(
+			&summary.CurrencyID,
+			&summary.CurrencyName,
+			&summary.AvailableBalance,
+			&summary.LockedBalance,
+			&summary.TotalBalance,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan wealth summary: %w", err)
+		}
+		summaries = append(summaries, summary)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating wealth summary: %w", err)
+	}
+
+	return summaries, nil
+}
+
+// GetUserWalletsWithCurrencyInfo retrieves all user wallets with detailed currency information
+func (r *WalletRepositoryImpl) GetUserWalletsWithCurrencyInfo(ctx context.Context, userID uuid.UUID) ([]WalletWithCurrencyInfo, error) {
+	query := `
+		SELECT 
+			w.id, 
+			w.currency_id, 
+			c.name, 
+			w.available_balance, 
+			w.locked_balance, 
+			(w.available_balance + w.locked_balance) as total_balance,
+			TO_CHAR(w.created_at, 'YYYY-MM-DD HH24:MI:SS')
+		FROM wallets w
+		LEFT JOIN currencies c ON w.currency_id = c.id
+		WHERE w.user_id = $1
+		ORDER BY w.created_at ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query wallets with currency info: %w", err)
+	}
+	defer rows.Close()
+
+	var walletInfos []WalletWithCurrencyInfo
+	for rows.Next() {
+		var info WalletWithCurrencyInfo
+		var currencyName sql.NullString
+
+		err := rows.Scan(
+			&info.WalletID,
+			&info.CurrencyID,
+			&currencyName,
+			&info.AvailableBalance,
+			&info.LockedBalance,
+			&info.TotalBalance,
+			&info.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan wallet with currency info: %w", err)
+		}
+
+		if currencyName.Valid {
+			info.CurrencyName = currencyName.String
+		} else {
+			info.CurrencyName = info.CurrencyID // Fallback to ID if name not found
+		}
+
+		walletInfos = append(walletInfos, info)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating wallet info: %w", err)
+	}
+
+	return walletInfos, nil
 }

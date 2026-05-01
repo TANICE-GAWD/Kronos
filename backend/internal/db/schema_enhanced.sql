@@ -225,4 +225,4 @@ INSERT INTO schema_versions (version_id, version_name, description)
 VALUES (1, 'Enhanced-DBMS-V1', 'Added ledger, transaction history, currencies, and audit tables')
 ON CONFLICT DO NOTHING;
 
-
+ 
