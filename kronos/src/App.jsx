@@ -15,6 +15,7 @@ import Notification from "./components/Notification";
 import { Stars, OrbitControls } from "@react-three/drei";
 import { LoginPage } from "./pages/LoginPage";
 import * as THREE from "three";
+import { Analytics } from "@vercel/analytics/next";
 
 function MainScene() {
   const [creditsInFlight, setCreditsInFlight] = useState(0);
@@ -197,13 +198,16 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             <ProtectedRoute>
-              <MainScene />
+              <>
+                <MainScene />
+                <Analytics />
+              </>
             </ProtectedRoute>
-          } 
+          }
         />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
