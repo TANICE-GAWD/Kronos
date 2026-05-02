@@ -22,11 +22,27 @@ const(
 )
 
 func planetCurrencyID(planetName string) string {
-	planetName = strings.TrimSpace(planetName)
-	if len(planetName) < 2 {
-		return "CR"
+	
+	planetToCurrency := map[string]string{
+		"earth":         "EARTH",
+		"mars":          "MARS",
+		"venus":         "VENUS",
+		"jupiter":       "JUPITER",
+		"saturn":        "SATURN",
+		"mercury":       "MERCURY",
+		"moon":          "MOON",
+		"asteroid":      "ASTEROID",
+		"asteroid belt": "ASTEROID",
 	}
-	return strings.ToUpper(planetName[:2])
+
+	normalizedPlanet := strings.ToLower(strings.TrimSpace(planetName))
+
+	if currencyID, exists := planetToCurrency[normalizedPlanet]; exists {
+		return currencyID
+	}
+
+	
+	return strings.ToUpper(planetName)
 }
 
 

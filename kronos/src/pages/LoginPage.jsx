@@ -295,7 +295,7 @@ export function LoginPage() {
                   disabled={loading}
                 >
                   <User size={14} />
-                  Bob (Jupiter )
+                  Bob (Jupiter)
                 </button>
               </div>
             </div>

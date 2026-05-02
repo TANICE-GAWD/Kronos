@@ -11,11 +11,27 @@ import(
 )
 
 func planetCurrencyIDForHub(planetName string) string {
-	planetName = strings.TrimSpace(planetName)
-	if len(planetName) < 2 {
-		return "CR"
+	// Map planet names to their corresponding currency IDs in the database
+	planetToCurrency := map[string]string{
+		"earth":         "EARTH",
+		"mars":          "MARS",
+		"venus":         "VENUS",
+		"jupiter":       "JUPITER",
+		"saturn":        "SATURN",
+		"mercury":       "MERCURY",
+		"moon":          "MOON",
+		"asteroid":      "ASTEROID",
+		"asteroid belt": "ASTEROID",
 	}
-	return strings.ToUpper(planetName[:2])
+
+	normalizedPlanet := strings.ToLower(strings.TrimSpace(planetName))
+
+	if currencyID, exists := planetToCurrency[normalizedPlanet]; exists {
+		return currencyID
+	}
+
+	// Fallback: if planet not found, use uppercase planet name (for extensibility)
+	return strings.ToUpper(planetName)
 }
 
 type Hub struct{
