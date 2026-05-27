@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Send, AlertCircle, Loader, Globe } from 'lucide-react';
 import { getCurrencyIdForPlanet } from '../utils/planetCurrency';
 import WebSocketManager from '../services/WebSocketManager';
+import { API_BASE_URL } from '../config';
 import '../styles/TransferModal.css';
 
 const currentUserId = () => localStorage.getItem('userId');
@@ -71,7 +72,7 @@ export default function TransferModal({
     setIsSearching(true);
     try {
       const res = await fetch(
-        `http://localhost:8080/api/users/search?q=${encodeURIComponent(query)}`,
+        `${API_BASE_URL}/api/users/search?q=${encodeURIComponent(query)}`,
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
       const data = await res.json();
@@ -163,7 +164,7 @@ export default function TransferModal({
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/transfer', {
+      const response = await fetch(`${API_BASE_URL}/api/transfer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

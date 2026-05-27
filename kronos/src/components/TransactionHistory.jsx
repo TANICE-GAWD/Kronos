@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const STATUS_ICON = {
   settled: <CheckCircle size={13} style={{ color: '#4ade80' }} />,
@@ -36,7 +37,7 @@ export default function TransactionHistory() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('http://localhost:8080/api/user/me/transactions', {
+      const res = await fetch(`${API_BASE_URL}/api/user/me/transactions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -353,6 +353,62 @@ func GetUserWealthHandler(walletRepo repository.WalletRepository) gin.HandlerFun
 	}
 }
 
+// GetUserTransactionHistoryHandler returns the current user's transaction history via v_user_transaction_history
+func GetUserTransactionHistoryHandler(transactionRepo repository.TransactionRepository) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userIDStr, ok := GetUserID(ctx)
+		if !ok {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: missing user ID"})
+			return
+		}
+		userID, err := uuid.Parse(userIDStr)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID format"})
+			return
+		}
+		records, err := transactionRepo.GetUserTransactionHistory(ctx, userID)
+		if err != nil {
+			log.Printf("[TxHistory] Error for user %s: %v", userID, err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve transaction history"})
+			return
+		}
+		if records == nil {
+			records = []repository.UserTransactionRecord{}
+		}
+		ctx.JSON(http.StatusOK, gin.H{
+			"user_id":      userID,
+			"transactions": records,
+			"count":        len(records),
+		})
+	}
+}
+
+// GetTransactionStatusHistoryHandler returns the status-change audit trail for one transaction
+// via v_transaction_status_history
+func GetTransactionStatusHistoryHandler(transactionRepo repository.TransactionRepository) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		txIDStr := ctx.Param("txID")
+		txID, err := uuid.Parse(txIDStr)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid transaction ID"})
+			return
+		}
+		records, err := transactionRepo.GetTransactionStatusHistory(ctx, txID)
+		if err != nil {
+			log.Printf("[TxStatusHistory] Error for tx %s: %v", txID, err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve status history"})
+			return
+		}
+		if records == nil {
+			records = []repository.StatusHistoryRecord{}
+		}
+		ctx.JSON(http.StatusOK, gin.H{
+			"transaction_id": txID,
+			"history":        records,
+		})
+	}
+}
+
 // GetUserWalletsDetailedHandler returns user's wallets with detailed currency information
 func GetUserWalletsDetailedHandler(walletRepo repository.WalletRepository) gin.HandlerFunc {
 	return func(ctx *gin.Context) {

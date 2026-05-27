@@ -118,20 +118,18 @@ func LoginHandler(authService *auth.AuthService) gin.HandlerFunc {
 	}
 }
 
-// SearchHandler allows users to search for other users by username prefix
+
+
 func SearchHandler(userRepository repository.UserRepository) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		query := ctx.Query("q")
 
+		limit := 5
 		if query == "" {
-			ctx.JSON(http.StatusBadRequest, ErrorResponse{
-				Error: "Search query parameter 'q' is required",
-			})
-			return
+			limit = 20
 		}
 
-		// Search for users (limit to 5 results)
-		users, err := userRepository.SearchUsersByUsername(ctx.Request.Context(), query, 5)
+		users, err := userRepository.SearchUsersByUsername(ctx.Request.Context(), query, limit)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, ErrorResponse{
 				Error: "Search failed: " + err.Error(),
@@ -139,7 +137,6 @@ func SearchHandler(userRepository repository.UserRepository) gin.HandlerFunc {
 			return
 		}
 
-		// Return only username and home_planet for privacy/security
 		results := make([]gin.H, 0)
 		for _, user := range users {
 			results = append(results, gin.H{

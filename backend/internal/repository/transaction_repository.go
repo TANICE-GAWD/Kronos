@@ -5,11 +5,32 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"backend/internal/models"
 	"github.com/google/uuid"
 )
 
+
+type UserTransactionRecord struct {
+	TransactionID      string    `json:"transaction_id"`
+	TransactionType    string    `json:"transaction_type"` 
+	OtherPartyUsername string    `json:"other_party_username"`
+	Amount             float64   `json:"amount"`
+	Status             string    `json:"status"`
+	Planet             string    `json:"planet"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
+
+type StatusHistoryRecord struct {
+	HistoryID     string    `json:"history_id"`
+	PreviousStatus string   `json:"previous_status"`
+	CurrentStatus  string   `json:"current_status"`
+	ChangedBy      string   `json:"changed_by"`
+	ChangedAt      time.Time `json:"changed_at"`
+}
 
 type TransactionRepository interface {
 	CreateTransaction(ctx context.Context, tx *models.Transaction) error
@@ -17,10 +38,12 @@ type TransactionRepository interface {
 	VoidTransaction(ctx context.Context, transactionID, senderWalletID uuid.UUID, amount float64, currencyID string) error
 	GetTransaction(ctx context.Context, transactionID uuid.UUID) (*models.Transaction, error)
 	GetAllTransactions(ctx context.Context) ([]*models.Transaction, error)
-	// NEW: Procedure-based atomic transfers
 	InitiateTransferWithProcedure(ctx context.Context, senderID, receiverID uuid.UUID, amount float64, currencyID, originPlanet, destPlanet string) (uuid.UUID, error)
 	SettleTransactionWithProcedure(ctx context.Context, transactionID uuid.UUID) (bool, error)
 	VoidTransactionWithProcedure(ctx context.Context, transactionID uuid.UUID) (bool, error)
+	
+	GetUserTransactionHistory(ctx context.Context, userID uuid.UUID) ([]UserTransactionRecord, error)
+	GetTransactionStatusHistory(ctx context.Context, transactionID uuid.UUID) ([]StatusHistoryRecord, error)
 }
 
 
@@ -235,7 +258,7 @@ func (r *TransactionRepositoryImpl) GetTransaction(ctx context.Context, transact
 	return transaction, nil
 }
 
-// GetAllTransactions retrieves all transactions from the database
+
 func (r *TransactionRepositoryImpl) GetAllTransactions(ctx context.Context) ([]*models.Transaction, error) {
 	query := `
 		SELECT id, sender_id, receiver_id, amount, status, origin_planet, destination_planet, created_at, updated_at
@@ -276,7 +299,7 @@ func (r *TransactionRepositoryImpl) GetAllTransactions(ctx context.Context) ([]*
 	return transactions, nil
 }
 
-// InitiateTransferWithProcedure creates an atomic, audited transfer using stored procedure
+
 func (r *TransactionRepositoryImpl) InitiateTransferWithProcedure(ctx context.Context, senderID, receiverID uuid.UUID, amount float64, currencyID, originPlanet, destPlanet string) (uuid.UUID, error) {
 	var txID uuid.UUID
 	err := r.db.QueryRowContext(ctx, `
@@ -292,7 +315,7 @@ func (r *TransactionRepositoryImpl) InitiateTransferWithProcedure(ctx context.Co
 	return txID, nil
 }
 
-// SettleTransactionWithProcedure settles a pending transaction using stored procedure
+
 func (r *TransactionRepositoryImpl) SettleTransactionWithProcedure(ctx context.Context, transactionID uuid.UUID) (bool, error) {
 	var settled bool
 	err := r.db.QueryRowContext(ctx, "SELECT sp_settle_transaction($1)", transactionID).Scan(&settled)
@@ -310,7 +333,7 @@ func (r *TransactionRepositoryImpl) SettleTransactionWithProcedure(ctx context.C
 	return settled, nil
 }
 
-// VoidTransactionWithProcedure refunds a pending transaction using stored procedure
+
 func (r *TransactionRepositoryImpl) VoidTransactionWithProcedure(ctx context.Context, transactionID uuid.UUID) (bool, error) {
 	var voided bool
 	err := r.db.QueryRowContext(ctx, "SELECT sp_void_transaction($1)", transactionID).Scan(&voided)
@@ -326,4 +349,75 @@ func (r *TransactionRepositoryImpl) VoidTransactionWithProcedure(ctx context.Con
 		log.Printf("[VoidTransactionProc] Transaction %s already voided or not pending", transactionID)
 	}
 	return voided, nil
+}
+
+
+func (r *TransactionRepositoryImpl) GetUserTransactionHistory(ctx context.Context, userID uuid.UUID) ([]UserTransactionRecord, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT transaction_id, transaction_type, other_party_username,
+		       amount, status, planet, created_at, updated_at
+		FROM v_user_transaction_history
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		LIMIT 50
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query v_user_transaction_history: %w", err)
+	}
+	defer rows.Close()
+
+	var records []UserTransactionRecord
+	for rows.Next() {
+		var rec UserTransactionRecord
+		var otherParty sql.NullString
+		if err := rows.Scan(
+			&rec.TransactionID,
+			&rec.TransactionType,
+			&otherParty,
+			&rec.Amount,
+			&rec.Status,
+			&rec.Planet,
+			&rec.CreatedAt,
+			&rec.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan transaction history row: %w", err)
+		}
+		if otherParty.Valid {
+			rec.OtherPartyUsername = otherParty.String
+		} else {
+			rec.OtherPartyUsername = "unknown"
+		}
+		records = append(records, rec)
+	}
+	return records, rows.Err()
+}
+
+
+func (r *TransactionRepositoryImpl) GetTransactionStatusHistory(ctx context.Context, transactionID uuid.UUID) ([]StatusHistoryRecord, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT history_id, COALESCE(previous_status, ''), current_status, changed_by, changed_at
+		FROM v_transaction_status_history
+		WHERE transaction_id = $1
+		ORDER BY changed_at ASC
+	`, transactionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query v_transaction_status_history: %w", err)
+	}
+	defer rows.Close()
+
+	var records []StatusHistoryRecord
+	for rows.Next() {
+		var rec StatusHistoryRecord
+		if err := rows.Scan(
+			&rec.HistoryID,
+			&rec.PreviousStatus,
+			&rec.CurrentStatus,
+			&rec.ChangedBy,
+			&rec.ChangedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan status history row: %w", err)
+		}
+		records = append(records, rec)
+	}
+	return records, rows.Err()
 }

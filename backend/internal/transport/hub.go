@@ -11,7 +11,7 @@ import(
 )
 
 func planetCurrencyIDForHub(planetName string) string {
-	// Map planet names to their corresponding currency IDs in the database
+	
 	planetToCurrency := map[string]string{
 		"earth":         "EARTH",
 		"mars":          "MARS",
@@ -30,7 +30,7 @@ func planetCurrencyIDForHub(planetName string) string {
 		return currencyID
 	}
 
-	// Fallback: if planet not found, use uppercase planet name (for extensibility)
+	
 	return strings.ToUpper(planetName)
 }
 

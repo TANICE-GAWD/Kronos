@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import WebSocketManager from './WebSocketManager';
+import { WS_URL } from '../config';
 
-export function useWebSocket(autoConnect = true, wsUrl = 'ws://localhost:8080/ws') {
+export function useWebSocket(autoConnect = true, wsUrl = WS_URL) {
   const [state, setState] = useState(null);
   const [changes, setChanges] = useState(null);
   const [isConnected, setIsConnected] = useState(false);

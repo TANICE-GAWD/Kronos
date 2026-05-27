@@ -88,11 +88,21 @@ func (as *AuthService) Register(ctx context.Context, username, password, homePla
 		return fmt.Errorf("failed to register user: %w", err)
 	}
 
+	currencyID := getPlanetCurrencyID(homePlanet)
+
 	
+	validCurrencies := map[string]bool{
+		"EARTH": true, "MARS": true, "VENUS": true, "JUPITER": true,
+		"SATURN": true, "MERCURY": true, "MOON": true, "ASTEROID": true,
+	}
+	if !validCurrencies[currencyID] {
+		currencyID = "EARTH"
+	}
+
 	wallet := &models.Wallet{
 		UserID:           user.ID,
-		CurrencyID:       getPlanetCurrencyID(homePlanet), 
-		AvailableBalance: 1000,      
+		CurrencyID:       currencyID,
+		AvailableBalance: 1000,
 		LockedBalance:    0,
 		CreatedAt:        now,
 		UpdatedAt:        now,

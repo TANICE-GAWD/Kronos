@@ -1,12 +1,12 @@
--- ============================================================================
--- KRONOS DATABASE - VIEWS
--- Database Views for Reporting, Analysis, and Simplified Data Access
--- ============================================================================
 
--- ============================================================================
--- VIEW 1: v_user_wallet_summary
--- Comprehensive wallet overview for each user
--- ============================================================================
+
+
+
+
+
+
+
+
 CREATE OR REPLACE VIEW v_user_wallet_summary AS
 SELECT 
     u.id as user_id,
@@ -27,10 +27,10 @@ LEFT JOIN currencies c ON w.currency_id = c.id
 WHERE c.is_active = TRUE
 ORDER BY u.username, c.name;
 
--- ============================================================================
--- VIEW 2: v_transaction_details
--- Rich transaction details with user and planet information
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_transaction_details AS
 SELECT 
     t.id as transaction_id,
@@ -50,10 +50,10 @@ LEFT JOIN users sender_user ON t.sender_id = sender_user.id
 LEFT JOIN users receiver_user ON t.receiver_id = receiver_user.id
 ORDER BY t.created_at DESC;
 
--- ============================================================================
--- VIEW 3: v_pending_transactions
--- All transactions awaiting settlement
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_pending_transactions AS
 SELECT 
     t.id as transaction_id,
@@ -70,10 +70,10 @@ LEFT JOIN users receiver_user ON t.receiver_id = receiver_user.id
 WHERE t.status = 'pending'
 ORDER BY t.created_at ASC;
 
--- ============================================================================
--- VIEW 4: v_user_transaction_history
--- Complete transaction history for each user (as sender and receiver)
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_user_transaction_history AS
 SELECT 
     u.id as user_id,
@@ -102,10 +102,10 @@ LEFT JOIN users receiver_user ON t.receiver_id = receiver_user.id
 WHERE t.id IS NOT NULL
 ORDER BY u.username, t.created_at DESC;
 
--- ============================================================================
--- VIEW 5: v_daily_volumes
--- Daily transaction volume and value analysis
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_daily_volumes AS
 SELECT 
     DATE(t.created_at) as transaction_date,
@@ -121,10 +121,10 @@ FROM transactions t
 GROUP BY DATE(t.created_at)
 ORDER BY transaction_date DESC;
 
--- ============================================================================
--- VIEW 6: v_user_wealth_summary
--- User total wealth across all currencies
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_user_wealth_summary AS
 SELECT 
     u.id as user_id,
@@ -142,10 +142,10 @@ LEFT JOIN currencies c ON w.currency_id = c.id AND c.is_active = TRUE
 GROUP BY u.id, u.username, u.home_planet
 ORDER BY total_wealth DESC;
 
--- ============================================================================
--- VIEW 7: v_currency_summary
--- Statistics for each currency
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_currency_summary AS
 SELECT 
     c.id as currency_id,
@@ -165,10 +165,10 @@ LEFT JOIN wallets w ON c.id = w.currency_id
 GROUP BY c.id, c.name, c.planet_name, c.symbol, c.is_active, c.created_at
 ORDER BY total_supply DESC NULLS LAST;
 
--- ============================================================================
--- VIEW 8: v_ledger_summary
--- Ledger entries with transaction context
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_ledger_summary AS
 SELECT 
     le.id as entry_id,
@@ -187,10 +187,10 @@ LEFT JOIN wallets w ON le.wallet_id = w.id
 LEFT JOIN users u ON w.user_id = u.id
 ORDER BY le.created_at DESC;
 
--- ============================================================================
--- VIEW 9: v_transaction_status_history
--- Audit trail showing transaction status changes
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_transaction_status_history AS
 SELECT 
     th.id as history_id,
@@ -211,10 +211,10 @@ LEFT JOIN users sender_user ON t.sender_id = sender_user.id
 LEFT JOIN users receiver_user ON t.receiver_id = receiver_user.id
 ORDER BY th.changed_at DESC;
 
--- ============================================================================
--- VIEW 10: v_user_activity_summary
--- User activity audit log with summarization
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_user_activity_summary AS
 SELECT 
     ua.id as activity_id,
@@ -229,10 +229,10 @@ FROM user_activities ua
 LEFT JOIN users u ON ua.user_id = u.id
 ORDER BY ua.created_at DESC;
 
--- ============================================================================
--- VIEW 11: v_top_transactors
--- Users with highest transaction activity
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_top_transactors AS
 SELECT 
     u.id as user_id,
@@ -251,10 +251,10 @@ GROUP BY u.id, u.username
 HAVING COUNT(t.id) > 0
 ORDER BY total_transactions DESC;
 
--- ============================================================================
--- VIEW 12: v_failed_transactions
--- All failed or voided transactions for audit
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_failed_transactions AS
 SELECT 
     t.id as transaction_id,
@@ -273,10 +273,10 @@ LEFT JOIN users receiver_user ON t.receiver_id = receiver_user.id
 WHERE t.status IN ('failed')
 ORDER BY t.updated_at DESC;
 
--- ============================================================================
--- VIEW 13: v_wallet_balance_by_planet
--- Aggregated balances grouped by planet/currency
--- ============================================================================
+
+
+
+
 CREATE OR REPLACE VIEW v_wallet_balance_by_planet AS
 SELECT 
     c.planet_name,
@@ -294,6 +294,6 @@ WHERE c.is_active = TRUE
 GROUP BY c.planet_name, c.id, c.name, c.symbol
 ORDER BY total_in_circulation DESC NULLS LAST;
 
--- ============================================================================
--- END OF VIEWS
--- ============================================================================
+
+
+

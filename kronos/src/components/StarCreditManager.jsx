@@ -5,6 +5,7 @@ import * as THREE from "three";
 
 import starsTexture from "/textures/textures2/8k_stars.jpg";
 import milkyWayTexture from "/textures/textures2/8k_stars_milky_way.jpg";
+import { WS_URL } from "../config";
 
 const statusColors = {
   active: 0xffd700,
@@ -599,7 +600,7 @@ export default function StarCreditManager({ setTotalCredits }) {
     isConnectingRef.current = true;
 
     try {
-      const ws = new WebSocket("ws://localhost:8080/ws");
+      const ws = new WebSocket(WS_URL);
       wsRef.current = ws;
 
       ws.onopen = () => {

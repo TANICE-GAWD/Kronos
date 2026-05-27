@@ -1,11 +1,11 @@
 
--- 1. ENABLE EXTENSIONS
+
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 
 
--- Separate planet/currency definitions from string literals in wallets
+
 CREATE TABLE IF NOT EXISTS currencies (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,

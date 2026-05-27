@@ -3,6 +3,7 @@ import { Wallet, Wifi, WifiOff, TrendingUp, TrendingDown, History } from 'lucide
 import WebSocketManager from '../services/WebSocketManager';
 import { getCurrencyIdForPlanet } from '../utils/planetCurrency';
 import TransactionHistory from './TransactionHistory';
+import { WS_URL } from '../config';
 import '../styles/WalletUI.css';
 
 export default function WalletUI() {
@@ -80,7 +81,7 @@ export default function WalletUI() {
     
     if (!manager.isConnected && !manager.ws) {
       console.log('[WalletUI] Connecting to WebSocket...');
-      manager.connect('ws://localhost:8080/ws');
+      manager.connect(WS_URL);
     }
 
     return unsubscribe;

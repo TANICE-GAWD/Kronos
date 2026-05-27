@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -52,7 +53,10 @@ func main() {
 	transactionRepository := repository.NewTransactionRepository(db)
 	log.Println("✓ Repositories initialized")
 
-	
+	if err := repository.SeedCurrencies(context.Background(), db); err != nil {
+		log.Fatalf("Failed to seed currencies: %v", err)
+	}
+
 	authService := auth.NewAuthService(userRepository, walletRepository, jwtSecret)
 	log.Println("✓ Auth service initialized")
 
@@ -83,7 +87,7 @@ func main() {
 	
 	
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"https://kronos-lime.vercel.app", "https://kronos-production-c81f.up.railway.app", "http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:3000"},
+		AllowOrigins:     []string{"https://kronos-lime.vercel.app", "http://localhost:8080", "http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -109,11 +113,13 @@ func main() {
 		protected.POST("/transfer", transport.TransferHandler(scheduler, ledger, userRepository, walletRepository, transactionRepository))
 		protected.GET("/balance/:userID", transport.BalanceHandler(ledger))
 		protected.GET("/history/:userID", transport.HistoryHandler(ledger))
-		// NEW: Wealth and wallet endpoints from enhanced database schema
 		protected.GET("/user/me/wealth", transport.GetUserWealthHandler(walletRepository))
 		protected.GET("/user/me/wallets-detailed", transport.GetUserWalletsDetailedHandler(walletRepository))
+		// View-backed endpoints
+		protected.GET("/user/me/transactions", transport.GetUserTransactionHistoryHandler(transactionRepository))
+		protected.GET("/transactions/:txID/status-history", transport.GetTransactionStatusHistoryHandler(transactionRepository))
 	}
-	log.Println("✓ Protected routes registered: /api/transfer, /api/balance, /api/history, /api/user/me/wealth, /api/user/me/wallets-detailed")
+	log.Println("✓ Protected routes registered: /api/transfer, /api/balance, /api/history, /api/user/me/wealth, /api/user/me/wallets-detailed, /api/user/me/transactions, /api/transactions/:txID/status-history")
 
 	
 	r.GET("/ws", func(ctx *gin.Context) {
