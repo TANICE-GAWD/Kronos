@@ -2,10 +2,10 @@
 
 > A gamified financial transfer platform that visualizes real-time transactions as physical **"packets"** travelling through a 3D simulated solar system.
 
-Kronos pairs a performance-oriented **Go** backend with a **React + Three.js** frontend to turn an otherwise invisible action — sending money — into something you can *watch*. Every user is assigned a home planet on signup. When you transfer credits to another user, the backend physics engine spawns a packet that physically flies through 3D space from the sender's planet to the receiver's planet. Funds only settle when the packet **arrives** — and a central black hole can pull packets in, voiding the transfer and refunding the sender.
+Kronos pairs a performance-oriented **Go** backend with a **React + Three.js** frontend to turn an otherwise invisible action >> sending money >> into something you can *watch*. Every user is assigned a home planet on signup. When you transfer credits to another user, the backend physics engine spawns a packet that physically flies through 3D space from the sender's planet to the receiver's planet. Funds only settle when the packet **arrives** >> and a central black hole can pull packets in, voiding the transfer and refunding the sender.
 
 **Live demo:** [kronos-lime.vercel.app](https://kronos-lime.vercel.app)
-**Generated docs:** [DeepWiki — TANICE-GAWD/Kronos](https://deepwiki.com/TANICE-GAWD/Kronos)
+**Generated docs:** [DeepWiki >> TANICE-GAWD/Kronos](https://deepwiki.com/TANICE-GAWD/Kronos)
 
 ---
 
@@ -41,18 +41,18 @@ Kronos pairs a performance-oriented **Go** backend with a **React + Three.js** f
   <p align="center"><img src="docs/scene.png" alt="Kronos solar system" width="800"/></p>
 -->
 
-<p align="center"><em>Screenshots of the live solar-system view go here — see the comment above for suggested shots, or try the <a href="https://kronos-lime.vercel.app">live demo</a>.</em></p>
+<p align="center"><em>Screenshots of the live solar-system view go here >> see the comment above for suggested shots, or try the <a href="https://kronos-lime.vercel.app">live demo</a>.</em></p>
 
 ---
 
 ## Core Concept
 
-A transfer in Kronos is not an instant database row update — it is a **simulated journey**:
+A transfer in Kronos is not an instant database row update >> it is a **simulated journey**:
 
 1. A user initiates a transfer over REST. The sender's funds are immediately **locked** (escrow) and a `pending` transaction is recorded.
 2. The backend instantiates a **Packet** at the sender's home-planet position and hands it to the **Scheduler**.
 3. The Scheduler runs a deterministic **60 FPS physics loop** that moves the packet toward the receiver's (orbiting, moving) planet, applying velocity, **gravitational time dilation**, and black-hole attraction.
-4. On **arrival**, the transaction is **settled** — the receiver is credited. If the packet falls into the **black hole**, the transaction is **voided** and the sender is refunded.
+4. On **arrival**, the transaction is **settled** >> the receiver is credited. If the packet falls into the **black hole**, the transaction is **voided** and the sender is refunded.
 5. Throughout the flight, the server broadcasts the full world state over **WebSockets** so every connected client renders the packets, wallets, and transactions in real time.
 
 ---
@@ -60,10 +60,10 @@ A transfer in Kronos is not an instant database row update — it is a **simulat
 ## Features
 
 - **Real-time 3D visualization** of money in motion using React Three Fiber.
-- **Authoritative server-side physics** — clients are pure renderers; the Go backend is the single source of truth.
-- **Orbital mechanics** — eight planets orbit the sun at scaled real-world speeds; packets *intercept* their moving destination.
-- **Gravitational hazard** — a black hole stalls (time-dilates) and ultimately destroys packets that drift too close.
-- **Escrow ledger** — funds are locked on send, settled on arrival, voided on destruction (no money created or lost).
+- **Authoritative server-side physics** >> clients are pure renderers; the Go backend is the single source of truth.
+- **Orbital mechanics** >> eight planets orbit the sun at scaled real-world speeds; packets *intercept* their moving destination.
+- **Gravitational hazard** >> a black hole stalls (time-dilates) and ultimately destroys packets that drift too close.
+- **Escrow ledger** >> funds are locked on send, settled on arrival, voided on destruction (no money created or lost).
 - **JWT authentication** with bcrypt-hashed passwords; per-planet currency wallets seeded on registration.
 - **WebSocket state diffing** on the client for efficient UI updates and auto-reconnect.
 - **Per-planet currencies** (EARTH, MARS, VENUS, JUPITER, …) and a detailed transaction/wealth history.
@@ -90,13 +90,13 @@ The system is split into a stateless-rendering **frontend** and an authoritative
 
 ```mermaid
 flowchart TB
-    subgraph Client["Frontend — React + Three.js (Vercel)"]
+    subgraph Client["Frontend >> React + Three.js (Vercel)"]
         UI["UI Layer<br/>LoginPage · WalletUI · TransferModal · TransactionHistory"]
         Scene["3D Scene<br/>Sun · Planets · BlackHole · StarCreditManager"]
         WSM["WebSocketManager<br/>singleton · state diffing · auto-reconnect"]
     end
 
-    subgraph Server["Backend — Go / Gin (Railway)"]
+    subgraph Server["Backend >> Go / Gin (Railway)"]
         Router["HTTP Router + CORS"]
         Auth["Auth Service<br/>JWT + bcrypt"]
         Handlers["REST Handlers<br/>transfer · balance · history · wealth"]
@@ -189,10 +189,10 @@ The engine runs server-side at a fixed **60 FPS** tick. All positions are derive
 
 **Behavior:**
 
-- **Orbits** — each planet's position is computed as `distance · (cos θ, 0, sin θ)` where `θ = serverTime · speed + initialAngle`.
-- **Interception** — packets don't aim at where the planet *is*, but iteratively predict where it *will be* (up to a 10s lead), so they curve to meet a moving target.
-- **Gravity & time dilation** — within `Pull_r + 20` of the black hole a packet is `Stalled` and its `DilationFactor` decays (slowing it); inside `Pull_r` it is `Destroyed`.
-- **Curved paths** — trajectories use quadratic Bézier interpolation for a natural arc.
+- **Orbits** >> each planet's position is computed as `distance · (cos θ, 0, sin θ)` where `θ = serverTime · speed + initialAngle`.
+- **Interception** >> packets don't aim at where the planet *is*, but iteratively predict where it *will be* (up to a 10s lead), so they curve to meet a moving target.
+- **Gravity & time dilation** >> within `Pull_r + 20` of the black hole a packet is `Stalled` and its `DilationFactor` decays (slowing it); inside `Pull_r` it is `Destroyed`.
+- **Curved paths** >> trajectories use quadratic Bézier interpolation for a natural arc.
 
 **Scaled orbital data** (1 AU ≈ 100 world units):
 
@@ -255,7 +255,7 @@ erDiagram
     }
 ```
 
-- **Wallets** track `available_balance` and `locked_balance` separately — locking on send is what makes escrow safe.
+- **Wallets** track `available_balance` and `locked_balance` separately >> locking on send is what makes escrow safe.
 - **Transactions** carry a `status` (`pending` → `settled` / `failed`) plus origin and destination planets.
 - Stored procedures and views (`procedures.sql`, `views.sql`) back atomic settlement and the user-facing history endpoints.
 
@@ -381,7 +381,7 @@ Base URL: `http://localhost:8080/api`. Protected routes require an `Authorizatio
 |----------|-------------|
 | `GET /ws` | Upgrade to WebSocket; receive continuous world-state broadcasts. |
 
-**Example — register & login:**
+**Example >> register & login:**
 
 ```bash
 curl -X POST http://localhost:8080/api/register \
@@ -428,7 +428,7 @@ On the client, the **`WebSocketManager`** singleton maintains the connection (wi
 - **`App.jsx`** sets up the React Three Fiber `<Canvas>`, the orbit-controlled camera (far plane at 100k units), the HUD, and routing between the auth pages and the main scene.
 - **Scene components** (`Sun`, `Planet`, `BlackHole`, `OrbitLine`) render the solar system; `PlanetFollowCamera` + `FollowPlanetTab` let you lock the camera onto a planet.
 - **`StarCreditManager`** consumes the live packet stream and renders each in-flight transfer as a moving object.
-- **`WalletUI`**, **`TransferModal`**, and **`TransactionHistory`** make up the financial UI — checking balances, searching recipients, sending credits, and reviewing history.
+- **`WalletUI`**, **`TransferModal`**, and **`TransactionHistory`** make up the financial UI >> checking balances, searching recipients, sending credits, and reviewing history.
 - **`useWebSocket`** wraps `WebSocketManager` for idiomatic React consumption.
 
 ---
