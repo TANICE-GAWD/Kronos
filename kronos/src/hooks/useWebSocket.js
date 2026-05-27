@@ -1,22 +1,9 @@
-/**
- * useWebSocket Hook
- *
- * Custom React hook for subscribing to WebSocket state updates.
- * Handles connection lifecycle and cleanup automatically.
- *
- * Usage:
- *   const { state, changes, isConnected } = useWebSocket();
- *   useEffect(() => {
- *     if (state.packets) {
- *       // Update 3D scene with state.packets
- *     }
- *   }, [state.packets]);
- */
+
 
 import { useEffect, useState, useCallback } from 'react';
 import WebSocketManager from './WebSocketManager';
 
-export function useWebSocket(autoConnect = true, wsUrl = 'wss://kronos-production-c81f.up.railway.app/ws') {
+export function useWebSocket(autoConnect = true, wsUrl = 'ws://localhost:8080/ws') {
   const [state, setState] = useState(null);
   const [changes, setChanges] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -25,7 +12,7 @@ export function useWebSocket(autoConnect = true, wsUrl = 'wss://kronos-productio
   useEffect(() => {
     const manager = WebSocketManager.getInstance();
 
-    // Connect if requested
+    
     if (autoConnect && !manager.isConnectedToServer()) {
       try {
         manager.connect(wsUrl);
@@ -34,11 +21,11 @@ export function useWebSocket(autoConnect = true, wsUrl = 'wss://kronos-productio
       }
     }
 
-    // Get initial state
+    
     setState(manager.getState());
     setIsConnected(manager.isConnectedToServer());
 
-    // Subscribe to updates
+    
     const unsubscribe = manager.subscribe((newState, newChanges) => {
       setState(newState);
       setChanges(newChanges);
@@ -47,7 +34,7 @@ export function useWebSocket(autoConnect = true, wsUrl = 'wss://kronos-productio
     });
 
     return () => {
-      // Cleanup subscription when component unmounts
+      
       unsubscribe();
     };
   }, [autoConnect, wsUrl]);

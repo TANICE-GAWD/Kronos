@@ -13,7 +13,7 @@ export function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const planets = ['mercury', 'venus', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'earth'];
+  const planets = ['earth', 'mars', 'venus', 'jupiter', 'saturn', 'mercury', 'moon', 'asteroid belt'];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -52,7 +52,7 @@ export function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('https://kronos-production-c81f.up.railway.app/api/register', {
+      const response = await fetch('http://localhost:8080/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

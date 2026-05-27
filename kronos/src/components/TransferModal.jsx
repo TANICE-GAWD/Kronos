@@ -1,65 +1,107 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Send, AlertCircle, Loader, Globe } from 'lucide-react';
 import { getCurrencyIdForPlanet } from '../utils/planetCurrency';
+import WebSocketManager from '../services/WebSocketManager';
 import '../styles/TransferModal.css';
 
-export default function TransferModal({ 
-  isOpen, 
-  onClose, 
+const currentUserId = () => localStorage.getItem('userId');
+
+// Convert WebSocket users map → sorted array, excluding self
+function wsUsersToList(usersMap) {
+  const selfId = currentUserId();
+  return Object.entries(usersMap || {})
+    .filter(([id]) => id !== selfId)
+    .map(([, u]) => ({ username: u.username, home_planet: u.homePlanet }))
+    .filter(u => u.username)
+    .sort((a, b) => a.username.localeCompare(b.username));
+}
+
+export default function TransferModal({
+  isOpen,
+  onClose,
   onTransferComplete,
   planetPositionsRef,
-  cameraRef 
+  cameraRef
 }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [allUsers, setAllUsers] = useState([]);      // full list from WS state
   const [searchResults, setSearchResults] = useState([]);
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const debounceRef = useRef(null);
 
   const authToken = localStorage.getItem('authToken');
 
-  
-  const handleSearch = async (query) => {
-    setSearchQuery(query);
-    
-    if (query.length < 1) {
-      setSearchResults([]);
-      return;
-    }
+  // Populate allUsers from WebSocket state (already cached, no API call)
+  useEffect(() => {
+    const manager = WebSocketManager.getInstance();
+    const state = manager.getState();
+    setAllUsers(wsUsersToList(state.users));
 
+    // Also keep it live as WS state updates
+    const unsub = manager.subscribe((newState) => {
+      setAllUsers(wsUsersToList(newState.users));
+    });
+    return unsub;
+  }, []);
+
+  // On modal open: reset form and show full user list
+  useEffect(() => {
+    if (!isOpen) return;
+    setSearchQuery('');
+    setSelectedRecipient(null);
+    setAmount('');
+    setError('');
+    setShowDropdown(true);
+    setSearchResults(allUsers);
+  }, [isOpen]);             // allUsers intentionally omitted — snapshot on open
+
+  // Whenever allUsers updates while modal is already open with no query, refresh list
+  useEffect(() => {
+    if (isOpen && searchQuery === '') {
+      setSearchResults(allUsers);
+    }
+  }, [allUsers]);
+
+  const searchAPI = async (query) => {
     setIsSearching(true);
     try {
-      const response = await fetch(
-        `https://kronos-production-c81f.up.railway.app/api/users/search?q=${encodeURIComponent(query)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-          },
-        }
+      const res = await fetch(
+        `http://localhost:8080/api/users/search?q=${encodeURIComponent(query)}`,
+        { headers: { Authorization: `Bearer ${authToken}` } }
       );
-
-      const data = await response.json();
-      if (response.ok) {
-        setSearchResults(data.results || []);
-      } else {
-        console.error('Search error:', data.error);
-        setSearchResults([]);
-      }
-    } catch (err) {
-      console.error('Search failed:', err);
-      setSearchResults([]);
+      const data = await res.json();
+      setSearchResults(res.ok ? (data.results || []) : []);
+    } catch {
+      // API unreachable — fall back to client-side filter
+      const q = query.toLowerCase();
+      setSearchResults(allUsers.filter(u => u.username.toLowerCase().startsWith(q)));
     }
     setIsSearching(false);
   };
 
-  // Handle recipient selection
+  const handleSearch = (value) => {
+    setSearchQuery(value);
+    setSelectedRecipient(null);
+    setShowDropdown(true);
+
+    if (value === '') {
+      setSearchResults(allUsers);
+      return;
+    }
+
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchAPI(value), 200);
+  };
+
   const handleSelectRecipient = (recipient) => {
     setSelectedRecipient(recipient);
     setSearchQuery(recipient.username);
-    setSearchResults([]);
+    setShowDropdown(false);
     setError('');
 
     // Tween camera to recipient's planet
@@ -121,7 +163,7 @@ export default function TransferModal({
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://kronos-production-c81f.up.railway.app/api/transfer', {
+      const response = await fetch('http://localhost:8080/api/transfer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -191,21 +233,21 @@ export default function TransferModal({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Search for a user..."
+                onFocus={() => setShowDropdown(true)}
+                placeholder="All users shown — type to filter..."
                 disabled={isLoading}
                 autoComplete="off"
               />
               {isSearching && <Loader size={16} className="search-spinner" />}
             </div>
 
-            
-            {searchResults.length > 0 && (
+            {showDropdown && searchResults.length > 0 && (
               <div className="search-results">
                 {searchResults.map((result) => (
                   <div
                     key={result.username}
-                    className="search-result-item"
-                    onClick={() => handleSelectRecipient(result)}
+                    className={`search-result-item ${selectedRecipient?.username === result.username ? 'selected' : ''}`}
+                    onMouseDown={() => handleSelectRecipient(result)}
                   >
                     <span className="result-username">{result.username}</span>
                     <span className="result-planet">

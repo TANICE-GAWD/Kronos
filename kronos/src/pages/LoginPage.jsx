@@ -59,7 +59,7 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('https://kronos-production-c81f.up.railway.app/api/login', {
+      const response = await fetch('http://localhost:8080/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('https://kronos-production-c81f.up.railway.app/api/register', {
+      const response = await fetch('http://localhost:8080/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,7 +173,7 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('https://kronos-production-c81f.up.railway.app/api/login', {
+      const response = await fetch('http://localhost:8080/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

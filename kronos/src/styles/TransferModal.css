@@ -192,8 +192,9 @@
   border-bottom: none;
 }
 
-.search-result-item:hover {
-  background: rgba(100, 150, 255, 0.1);
+.search-result-item:hover,
+.search-result-item.selected {
+  background: rgba(100, 150, 255, 0.15);
 }
 
 .result-username {
@@ -274,7 +275,7 @@
   cursor: not-allowed;
 }
 
-/* Scrollbar styling for search results */
+
 .search-results::-webkit-scrollbar {
   width: 6px;
 }
@@ -292,7 +293,7 @@
   background: rgba(100, 150, 255, 0.5);
 }
 
-/* Mobile responsiveness */
+
 @media (max-width: 480px) {
   .transfer-modal {
     width: 95%;

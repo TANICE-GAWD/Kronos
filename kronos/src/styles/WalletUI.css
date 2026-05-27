@@ -264,6 +264,185 @@
 }
 
 
+
+.wallet-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.history-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  background: rgba(100, 150, 255, 0.08);
+  color: rgba(200, 220, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.history-toggle-btn:hover {
+  background: rgba(100, 150, 255, 0.18);
+  color: #fff;
+  border-color: rgba(100, 150, 255, 0.5);
+}
+
+.history-toggle-btn.active {
+  background: rgba(100, 150, 255, 0.25);
+  color: #c7d8ff;
+  border-color: rgba(100, 150, 255, 0.6);
+}
+
+
+.tx-history {
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 12px;
+}
+
+.tx-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.tx-history-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(200, 220, 255, 0.6);
+}
+
+.tx-refresh-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(200, 220, 255, 0.5);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.tx-refresh-btn:hover {
+  color: rgba(200, 220, 255, 0.9);
+}
+
+.tx-loading,
+.tx-empty,
+.tx-error {
+  font-size: 12px;
+  text-align: center;
+  padding: 12px 0;
+  color: rgba(200, 220, 255, 0.45);
+}
+
+.tx-error {
+  color: #f87171;
+}
+
+.tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 150, 255, 0.3) transparent;
+}
+
+.tx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: background 0.15s;
+}
+
+.tx-item:hover {
+  background: rgba(100, 150, 255, 0.08);
+}
+
+.tx-direction {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tx-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.tx-party {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.tx-type-label {
+  color: rgba(200, 220, 255, 0.45);
+  font-size: 11px;
+}
+
+.tx-username {
+  color: #e2e8f0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.tx-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.tx-planet,
+.tx-time {
+  font-size: 10px;
+  color: rgba(200, 220, 255, 0.4);
+  text-transform: capitalize;
+}
+
+.tx-right {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.tx-amount {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+.tx-status {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
 @media (max-width: 768px) {
   .wallet-container {
     bottom: 10px;

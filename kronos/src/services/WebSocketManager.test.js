@@ -6,12 +6,12 @@
  *
  * Example:
  *   import { testWebSocketManager } from './services/WebSocketManager.test.js';
- *   testWebSocketManager('wss://kronos-production-c81f.up.railway.app/ws');
+ *   testWebSocketManager('ws://localhost:8080/ws');
  */
 
 import WebSocketManager from './WebSocketManager';
 
-export async function testWebSocketManager(wsUrl = 'wss://kronos-production-c81f.up.railway.app/ws') {
+export async function testWebSocketManager(wsUrl = 'ws://localhost:8080/ws') {
   console.log('=== WebSocketManager Test Suite ===\n');
 
   const manager = WebSocketManager.getInstance();
@@ -100,7 +100,7 @@ export function testReconnection() {
   const manager = WebSocketManager.getInstance();
 
   console.log('1. Connecting...');
-  manager.connect('wss://kronos-production-c81f.up.railway.app/ws');
+  manager.connect('ws://localhost:8080/ws');
 
   // Wait 2 seconds, then simulate network failure
   setTimeout(() => {

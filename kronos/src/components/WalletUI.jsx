@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Wallet, Wifi, WifiOff, TrendingUp, TrendingDown } from 'lucide-react';
+import { Wallet, Wifi, WifiOff, TrendingUp, TrendingDown, History } from 'lucide-react';
 import WebSocketManager from '../services/WebSocketManager';
 import { getCurrencyIdForPlanet } from '../utils/planetCurrency';
+import TransactionHistory from './TransactionHistory';
 import '../styles/WalletUI.css';
 
 export default function WalletUI() {
@@ -11,8 +12,9 @@ export default function WalletUI() {
   const [balance, setBalance] = useState(0);
   const [previousBalance, setPreviousBalance] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [changeDirection, setChangeDirection] = useState(null); 
+  const [changeDirection, setChangeDirection] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     if (!userId) {
@@ -78,7 +80,7 @@ export default function WalletUI() {
     
     if (!manager.isConnected && !manager.ws) {
       console.log('[WalletUI] Connecting to WebSocket...');
-      manager.connect('wss://kronos-production-c81f.up.railway.app/ws');
+      manager.connect('ws://localhost:8080/ws');
     }
 
     return unsubscribe;
@@ -116,10 +118,20 @@ export default function WalletUI() {
 
         {/* Wallet Header */}
         <div className="wallet-header">
-          <h2 className="wallet-title">
-            <Wallet size={20} style={{ display: 'inline', marginRight: '8px' }} />
-            Wallet
-          </h2>
+          <div className="wallet-header-row">
+            <h2 className="wallet-title">
+              <Wallet size={20} style={{ display: 'inline', marginRight: '8px' }} />
+              Wallet
+            </h2>
+            <button
+              className={`history-toggle-btn ${showHistory ? 'active' : ''}`}
+              onClick={() => setShowHistory(v => !v)}
+              title="Transaction History"
+            >
+              <History size={15} />
+              <span>History</span>
+            </button>
+          </div>
           <p className="wallet-username">{username}</p>
         </div>
 
@@ -176,6 +188,9 @@ export default function WalletUI() {
             </p>
           )}
         </div>
+
+        {/* Transaction History Panel */}
+        {showHistory && <TransactionHistory />}
       </div>
     </div>
   );
