@@ -460,4 +460,3 @@ CORS on the backend already allows the deployed Vercel origin and common localho
 
 ---
 
-<sub>Diagrams in this README are authored in [Mermaid](https://mermaid.js.org) and rendered natively by GitHub. Architecture and concepts reference the auto-generated <a href="https://deepwiki.com/TANICE-GAWD/Kronos">DeepWiki</a> and the source in <code>backend/</code> and <code>kronos/src/</code>.</sub>
