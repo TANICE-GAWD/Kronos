@@ -7,7 +7,8 @@
 //
 // WS_URL is derived from API_BASE_URL so http->ws and https->wss stay in sync.
 
-const PROD_API_URL = 'https://kronos-production-c81f.up.railway.app';
+// const PROD_API_URL = 'https://kronos-production-c81f.up.railway.app';
+const PROD_API_URL = 'https://kronos-production-8714.up.railway.app';
 
 const envUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
 
